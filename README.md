@@ -81,7 +81,7 @@
 - 前端：Vue3 + Vite + Axios + Element Plus / Ant Design Vue
 - 后端：Node.js + Express + SQLite (Knex.js 或 Sequelize)
 - 接口通信：Axios 负责前后端数据交互，RESTful API 设计
-- 部署：前端可部署到 Nginx，后端使用 PM2 管理 Node 服务
+
 
 四、数据库设计简要
 
