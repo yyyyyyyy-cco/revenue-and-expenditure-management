@@ -79,7 +79,9 @@
 三、技术栈与接口说明
 
 - 前端：Vue3 + Vite + Axios + Element Plus / Ant Design Vue
-- 后端：Node.js + Express + SQLite (Knex.js 或 Sequelize)
+- 
+- 后端：Node.js + Express + SQLite
+- 
 - 接口通信：Axios 负责前后端数据交互，RESTful API 设计
 
 
