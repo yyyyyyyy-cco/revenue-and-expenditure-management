@@ -79,9 +79,7 @@
 三、技术栈与接口说明
 
 - 前端：Vue3 + Vite + Axios + Element Plus
-- 
 - 后端：Node.js + Express + SQLite
-- 
 - 接口通信：Axios 负责前后端数据交互，RESTful API 设计
 
 
@@ -91,3 +89,27 @@
 - bills：账单主表
 - categories：分类字典表（可选）
 - recurring_bills：周期账单规则表（拓展）
+
+
+五、后端项目结构汇总
+
+```text
+backend/
+├── src/
+│   ├── app.js               # 后端入口文件，配置中间件和路由挂载
+│   ├── controllers/         # 业务逻辑层 (大厨)
+│   │   └── billController.js # 账单增删改查逻辑
+│   ├── routes/              # 路由层 (服务员)
+│   │   ├── authRoutes.js     # 用户认证路由
+│   │   ├── billRoutes.js     # 账单管理路由
+│   │   ├── categoryRoutes.js # 分类管理路由
+│   │   └── statRoutes.js     # 统计分析路由
+│   └── db/                  # 数据库配置层
+│       ├── db.js            # 数据库连接池配置
+│       ├── init.js          # 数据库初始化脚本
+│       └── schema.sql       # 数据库建表 SQL
+├── expense_manager.db       # SQLite 数据库文件
+├── database_design.md       # 数据库设计说明文档
+├── test_api_billRoutes.js   # API 测试脚本
+└── package.json             # 项目依赖与脚本配置
+```
