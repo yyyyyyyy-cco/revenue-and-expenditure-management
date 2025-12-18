@@ -1,16 +1,11 @@
 const express = require('express');
 const router = express.Router();
-
-// 这里只是占位，后面会由 Controller 实现具体逻辑
+const authController = require('../controllers/authController');
 
 // 注册
-router.post('/register', (req, res) => {
-    res.json({ message: 'Register endpoint' });
-});
+router.post('/register', authController.register);
 
 // 登录
-router.post('/login', (req, res) => {
-    res.json({ message: 'Login endpoint' });
-});
+router.post('/login', authController.login);
 
 module.exports = router;
