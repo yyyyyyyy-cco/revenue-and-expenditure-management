@@ -99,7 +99,9 @@ const showPassword = ref(false)
 const isSubmitting = ref(false)
 const rememberMe = ref(false)
 
-const handleLogin = () => {
+const API_BASE = 'http://localhost:3000'
+
+const handleLogin = async () => {
   if (!form.username || !form.password) {
     alert('请输入用户名和密码')
     return
@@ -107,18 +109,38 @@ const handleLogin = () => {
 
   isSubmitting.value = true
 
-  // 模拟登录请求
-  setTimeout(() => {
-    localStorage.setItem('isLoggedIn', 'true')
-    localStorage.setItem('username', form.username)
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: form.username, password: form.password })
+    })
 
-    if (rememberMe.value) {
-      localStorage.setItem('rememberMe', 'true')
+    const data = await res.json()
+
+    if (!res.ok) {
+      alert(data.message || '登录失败')
+      isSubmitting.value = false
+      return
     }
 
-    alert('登录成功！')
-    router.push('/account')
-  }, 1500)
+    // 保存 token、用户名和登录状态
+    if (data.token) {
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('username', form.username)
+      localStorage.setItem('isLoggedIn', 'true')
+      if (rememberMe.value) localStorage.setItem('rememberMe', 'true')
+      alert('登录成功！')
+      router.push('/account')
+    } else {
+      alert('登录成功，但未收到 token')
+    }
+  } catch (err) {
+    console.error('登录错误', err)
+    alert('无法连接到服务器')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 const showForgotPassword = () => {
