@@ -78,7 +78,7 @@
 
 三、技术栈与接口说明
 
-- 前端：Vue3 + Vite + Axios + Element Plus / Ant Design Vue
+- 前端：Vue3 + Vite + Axios + Element Plus
 - 
 - 后端：Node.js + Express + SQLite
 - 
