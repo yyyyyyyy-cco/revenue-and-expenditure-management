@@ -95,14 +95,28 @@
 - categories：分类字典表（可选）
 - recurring_bills：周期账单规则表（拓展）
 
-五、后端项目结构汇总
+五、后端依赖说明
+
+- **express**: 核心 Web 框架，用于构建 RESTful API。
+- **cors**: 处理跨域请求，允许前端应用访问后端接口。
+- **sqlite3**: 数据库驱动，用于操作 SQLite 数据库文件。
+- **bcryptjs**: 密码加密工具，用于将用户密码进行哈希存储，提高安全性。
+- **jsonwebtoken (JWT)**: 身份验证工具，用于生成和验证用户登录令牌。
+- **nodemon** (开发依赖): 自动重启工具，在代码修改后自动重新启动服务器，提高开发效率。
+
+六、后端项目结构汇总
 
 ```text
 backend/
 ├── src/
 │   ├── app.js               # 后端入口文件，配置中间件和路由挂载
 │   ├── controllers/         # 业务逻辑层
-│   │   └── billController.js # 账单增删改查逻辑
+│   │   ├── authController.js # 用户认证与资料修改逻辑 [NEW]
+│   │   ├── billController.js # 账单增删改查逻辑
+│   │   ├── categoryController.js # 分类管理逻辑 [NEW]
+│   │   └── statController.js # 统计分析逻辑 [NEW]
+│   ├── middleware/          # 中间件层 [NEW]
+│   │   └── authMiddleware.js # JWT 身份验证中间件 [NEW]
 │   ├── routes/              # 路由层
 │   │   ├── authRoutes.js     # 用户认证路由
 │   │   ├── billRoutes.js     # 账单管理路由
@@ -114,6 +128,123 @@ backend/
 │       └── schema.sql       # 数据库建表 SQL
 ├── expense_manager.db       # SQLite 数据库文件
 ├── database_design.md       # 数据库设计说明文档
-├── test_api_billRoutes.js   # API 测试脚本
+├── test_api_billRoutes.js   # API 测试脚本 (已更新支持 Auth)
 └── package.json             # 项目依赖与脚本配置
 ```
+
+七、后端 API 接口文档
+
+所有接口基础路径为 `/api`。除登录和注册外，所有接口均需要 `Authorization: Bearer <token>` 请求头。
+
+### 1. 用户认证 (Auth)
+
+#### 注册
+- **URL**: `/auth/register`
+- **方法**: `POST`
+- **请求体**:
+  ```json
+  {
+    "username": "testuser",
+    "password": "password123"
+  }
+  ```
+- **响应**: `200 OK`
+
+#### 登录
+- **URL**: `/auth/login`
+- **方法**: `POST`
+- **请求体**:
+  ```json
+  {
+    "username": "testuser",
+    "password": "password123"
+  }
+  ```
+- **响应**:
+  ```json
+  {
+    "message": "登录成功",
+    "token": "eyJhbGciOiJIUzI1..."
+  }
+  ```
+
+#### 修改个人资料
+- **URL**: `/auth/update-profile`
+- **方法**: `PUT`
+- **请求体**: (可选 username 或 password)
+  ```json
+  {
+    "username": "newname",
+    "password": "newpassword"
+  }
+  ```
+
+---
+
+### 2. 账单管理 (Bills)
+
+#### 获取账单列表
+- **URL**: `/bills`
+- **方法**: `GET`
+- **查询参数**:
+  - `page`: 页码 (默认 1)
+  - `limit`: 每页条数 (默认 10)
+  - `month`: 月份筛选 (格式: YYYY-MM)
+  - `type`: 类型筛选 (`income` 或 `expense`)
+  - `category_id`: 分类 ID 筛选
+
+#### 添加账单
+- **URL**: `/bills`
+- **方法**: `POST`
+- **请求体**:
+  ```json
+  {
+    "type": "expense",
+    "amount": 100.0,
+    "category_id": 4,
+    "date": "2023-12-19",
+    "remark": "晚餐"
+  }
+  ```
+
+#### 更新账单
+- **URL**: `/bills/:id`
+- **方法**: `PUT`
+
+#### 删除账单
+- **URL**: `/bills/:id`
+- **方法**: `DELETE`
+
+---
+
+### 3. 分类管理 (Categories)
+
+#### 获取分类列表
+- **URL**: `/categories`
+- **方法**: `GET`
+
+---
+
+### 4. 统计功能 (Stats)
+
+#### 获取当月统计
+- **URL**: `/stats/monthly`
+- **方法**: `GET`
+- **响应**:
+  ```json
+  {
+    "month": "2023-12",
+    "total_income": 5000,
+    "total_expense": 2000,
+    "balance": 3000
+  }
+  ```
+
+#### 获取收支趋势
+- **URL**: `/stats/trend`
+- **方法**: `GET`
+
+#### 获取支出分类占比
+- **URL**: `/stats/category-ratio`
+- **方法**: `GET`
+- **查询参数**: `month` (可选)
