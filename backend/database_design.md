@@ -42,6 +42,7 @@
 | `amount`      | REAL     | NOT NULL                             | 金额                                          |
 | `date`        | DATETIME | NOT NULL                             | 发生日期                                      |
 | `remark`      | TEXT     | -                                    | 备注说明                                      |
+| `source`      | TEXT     | DEFAULT 'system'                     | 账单来源（如：`system`, `alipay`, `wechat`） |
 | `created_at`  | DATETIME | DEFAULT CURRENT_TIMESTAMP            | 记录录入时间                                  |
 
 ### 关系说明：
@@ -51,8 +52,18 @@
 
 ---
 
+## 4. 预设分类说明
+
+系统初始化时会自动创建以下常用分类：
+
+- **支出类**：餐饮美食、服饰装扮、日用百货、交通出行、住房物业、休闲娱乐、医疗教育、生活服务等。
+- **收入类**：工资薪水、投资理财、红包转账、退款售后、其他收入等。
+
+---
+
 ## 设计亮点
 
 1. **类型约束**：在数据库层级通过 `CHECK` 约束确保 `type` 字段只能为 `income` 或 `expense`，增强数据一致性。
-2. **自动时间戳**：通过 `DEFAULT CURRENT_TIMESTAMP` 自动记录创建时间。
-3. **外键关联**：通过外键维护数据的引用完整性。
+2. **多来源支持**：通过 `source` 字段支持手动录入及第三方支付平台（支付宝、微信）的账单导入。
+3. **自动时间戳**：通过 `DEFAULT CURRENT_TIMESTAMP` 自动记录创建时间。
+4. **外键关联**：通过外键维护数据的引用完整性。
