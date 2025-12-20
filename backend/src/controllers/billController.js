@@ -82,8 +82,9 @@ exports.getAllBills = (req, res) => {
  * 创建新账单
  * 
  * 1. 验证必填字段
- * 2. 自动关联当前登录用户的 userId
- * 3. 插入数据库并返回新生成的 ID
+ * 2. 校验 category_id 的合法性 (是否存在且类型匹配)
+ * 3. 若未传或校验未通过，自动分配对应的“其他”分类
+ * 4. 插入数据库
  */
 exports.createBill = (req, res) => {
     const { amount, type, category_id, date, remark } = req.body;
@@ -93,17 +94,51 @@ exports.createBill = (req, res) => {
         return res.status(400).json({ error: '参数缺失：金额(amount)、类型(type)和日期(date)为必填项' });
     }
 
-    const sql = `INSERT INTO bills (user_id, category_id, type, amount, date, remark) VALUES (?, ?, ?, ?, ?, ?)`;
-    const params = [userId, category_id, type, amount, date, remark];
+    // 统一定义插入逻辑的函数
+    const performInsert = (finalCategoryId) => {
+        const sql = `INSERT INTO bills (user_id, category_id, type, amount, date, remark) VALUES (?, ?, ?, ?, ?, ?)`;
+        const params = [userId, finalCategoryId, type, amount, date, remark];
 
-    db.run(sql, params, function (err) {
-        if (err) return res.status(500).json({ error: '创建账单失败：' + err.message });
-        res.status(201).json({
-            id: this.lastID,
-            ...req.body,
-            user_id: userId
+        db.run(sql, params, function (err) {
+            if (err) return res.status(500).json({ error: '创建账单失败：' + err.message });
+            res.status(201).json({
+                id: this.lastID,
+                ...req.body,
+                category_id: finalCategoryId,
+                user_id: userId
+            });
         });
-    });
+    };
+
+    // 获取默认分类的函数
+    const assignDefaultCategory = () => {
+        const defaultName = type === 'income' ? '其他收入' : '其他支出';
+        db.get('SELECT id FROM categories WHERE name = ? AND type = ?', [defaultName, type], (err, row) => {
+            if (err || !row) {
+                // 如果数据库里连默认分类都没有，只能传 null
+                return performInsert(null);
+            }
+            performInsert(row.id);
+        });
+    };
+
+    // 逻辑开始：如果有传入 category_id，则先校验
+    if (category_id) {
+        db.get('SELECT id, type FROM categories WHERE id = ?', [category_id], (err, row) => {
+            if (err) return res.status(500).json({ error: '分类校验失败' });
+
+            if (row && row.type === type) {
+                // 分类存在且类型匹配，直接使用
+                performInsert(category_id);
+            } else {
+                // 分类不存在或类型不匹配，分配默认分类
+                assignDefaultCategory();
+            }
+        });
+    } else {
+        // 未传入分类，直接分配默认分类
+        assignDefaultCategory();
+    }
 };
 
 /**
