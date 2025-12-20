@@ -137,10 +137,89 @@ exports.deleteBill = (req, res) => {
     const { id } = req.params;
     const userId = req.userId;
 
-    const sql = `DELETE FROM bills WHERE id = ? AND user_id = ?`;
     db.run(sql, [id, userId], function (err) {
         if (err) return res.status(500).json({ error: '删除账单失败：' + err.message });
         if (this.changes === 0) return res.status(404).json({ error: '未找到指定账单或无权操作' });
         res.json({ message: '账单删除成功' });
     });
+};
+
+const { parseBillFile } = require('../utils/billParser');
+const categoryClassifier = require('../utils/categoryClassifier');
+const fs = require('fs');
+
+
+/**
+ * 导入账单
+ */
+exports.importBills = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: '请上传文件' });
+    }
+    const filePath = req.file.path;
+    const userId = req.userId;
+
+    try {
+        // Load categories map first
+        const categoryMap = await categoryClassifier.loadCategories(db);
+
+        const bills = parseBillFile(filePath);
+        let importedCount = 0;
+        let duplicateCount = 0;
+        let processed = 0;
+
+        if (bills.length === 0) {
+            fs.unlinkSync(filePath);
+            return res.json({ message: '导入完成', imported: 0, duplicate: 0 });
+        }
+
+        db.serialize(() => {
+            db.run("BEGIN TRANSACTION");
+
+            const stmt = db.prepare(`
+                INSERT INTO bills (user_id, category_id, type, amount, date, remark, source)
+                SELECT ?, ?, ?, ?, ?, ?, ?
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM bills 
+                    WHERE user_id = ? AND amount = ? AND date = ? AND type = ? AND source = ?
+                )
+            `);
+
+            bills.forEach((bill) => {
+                // Auto-classify the bill
+                const category_id = categoryClassifier.classifyBill(bill, categoryMap);
+
+                stmt.run(
+                    userId, category_id, bill.type, bill.amount, bill.date, bill.remark, bill.source,
+                    userId, bill.amount, bill.date, bill.type, bill.source,
+                    function (err) {
+                        processed++;
+                        if (err) {
+                            console.error("Import Row Error:", err);
+                        } else if (this.changes > 0) {
+                            importedCount++;
+                        } else {
+                            duplicateCount++;
+                        }
+
+                        if (processed === bills.length) {
+                            stmt.finalize(() => {
+                                db.run("COMMIT", () => {
+                                    fs.unlinkSync(filePath);
+                                    res.json({
+                                        message: '导入完成',
+                                        imported: importedCount,
+                                        duplicate: duplicateCount
+                                    });
+                                });
+                            });
+                        }
+                    }
+                );
+            });
+        });
+    } catch (e) {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        return res.status(500).json({ error: '解析失败: ' + e.message });
+    }
 };
