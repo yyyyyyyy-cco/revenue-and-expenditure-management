@@ -1,11 +1,9 @@
 <template>
   <div class="login-container">
-    <!-- 动态背景元素 -->
     <div class="blob blob1"></div>
     <div class="blob blob2"></div>
 
     <div class="login-card">
-      <!-- 顶部标题区域 -->
       <div class="login-header">
         <div class="logo-container">
           <div class="logo">
@@ -17,17 +15,15 @@
           <div class="pulse-dot"></div>
         </div>
 
-        <h1 class="login-title">个人收支管理系统</h1>
-        <p class="login-subtitle">请输入登录信息</p>
+        <h1 class="login-title">创建账号</h1>
+        <p class="login-subtitle">注册一个新账号以开始管理收支</p>
       </div>
 
-      <!-- 登录表单 -->
       <div class="login-form">
-        <!-- 用户名输入 -->
         <div class="form-group">
           <label class="form-label">用户名</label>
           <div class="input-group">
-            <input type="text" class="form-input" placeholder="输入您的用户名" v-model="form.username" required autofocus />
+            <input type="text" class="form-input" placeholder="输入用户名" v-model="form.username" required autofocus />
             <div class="input-icon">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -37,49 +33,43 @@
           </div>
         </div>
 
-        <!-- 密码输入 -->
+      
         <div class="form-group">
           <label class="form-label">密码</label>
           <div class="input-group">
-            <input type="password" class="form-input" placeholder="输入您的密码" v-model="form.password" required />
+            <input :type="showPassword ? 'text' : 'password'" class="form-input" placeholder="设置密码" v-model="form.password" required />
             <div class="input-icon" @click="showPassword = !showPassword" style="cursor: pointer;">
-              <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.543-7z" />
+              <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.543-7z" />
               </svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.968 9.968 0 011.563-4.255A10.05 10.05 0 0112 5c4.478 0 8.268 2.943 9.543 7a9.968 9.968 0 01-1.563 4.255A10.05 10.05 0 0112 19z" />
+              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.968 9.968 0 011.563-4.255A10.05 10.05 0 0112 5c4.478 0 8.268 2.943 9.543 7a9.968 9.968 0 01-1.563 4.255A10.05 10.05 0 0112 19z" />
               </svg>
             </div>
           </div>
         </div>
 
-        <!-- 表单选项：已对齐 + 增加上方间距 -->
-        <div class="form-options">
-          <div class="remember-me">
-            <input type="checkbox" id="remember" class="remember-checkbox" v-model="rememberMe" />
-            <label for="remember" class="remember-label">记住我</label>
+        <div class="form-group">
+          <label class="form-label">确认密码</label>
+          <div class="input-group">
+            <input :type="showPassword ? 'text' : 'password'" class="form-input" placeholder="再次输入密码" v-model="form.confirmPassword" required />
+            <div class="input-icon" style="pointer-events: none;">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
           </div>
-          <a href="#" class="forgot-password" @click.prevent="showForgotPassword">忘记密码？</a>
         </div>
 
-        <!-- 登录按钮 -->
-        <button @click="handleLogin" class="login-button" :class="{ 'is-submitting': isSubmitting }">
-          <div v-if="isSubmitting" class="spinner">
-            <div class="spinner-circle"></div>
-          </div>
-          <span v-else>登录</span>
+        <button @click="handleRegister" class="login-button" :class="{ 'is-submitting': isSubmitting }">
+          <div v-if="isSubmitting" class="spinner"><div class="spinner-circle"></div></div>
+          <span v-else>创建账号</span>
         </button>
 
-        <!-- 注册链接 -->
         <div class="register-link">
-          <span>没有账号？</span>
-          <a href="#" class="register-link-text" @click.prevent="navigateToRegister">立即注册</a>
+          <span>已有账号？</span>
+          <a href="#" class="register-link-text" @click.prevent="navigateToLogin">去登录</a>
         </div>
       </div>
     </div>
@@ -91,65 +81,45 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const form = reactive({
-  username: '',
-  password: ''
-})
+const form = reactive({ username: '', email: '', password: '', confirmPassword: '' })
 const showPassword = ref(false)
 const isSubmitting = ref(false)
-const rememberMe = ref(false)
 
 const API_BASE = 'http://localhost:3000'
 
-const handleLogin = async () => {
-  if (!form.username || !form.password) {
-    alert('请输入用户名和密码')
+const handleRegister = async () => {
+  if (!form.username || !form.password || !form.confirmPassword) {
+    alert('请完整填写必填项')
+    return
+  }
+  if (form.password !== form.confirmPassword) {
+    alert('两次输入的密码不一致')
     return
   }
 
   isSubmitting.value = true
-
   try {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
+    const res = await fetch(`${API_BASE}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: form.username, password: form.password })
+      body: JSON.stringify({ username: form.username, password: form.password, email: form.email })
     })
-
     const data = await res.json()
-
     if (!res.ok) {
-      alert(data.message || '登录失败')
-      isSubmitting.value = false
+      alert(data.message || '注册失败')
       return
     }
-
-    // 保存 token、用户名和登录状态
-    if (data.token) {
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('username', form.username)
-      localStorage.setItem('isLoggedIn', 'true')
-      if (rememberMe.value) localStorage.setItem('rememberMe', 'true')
-      alert('登录成功！')
-      router.push('/account')
-    } else {
-      alert('登录成功，但未收到 token')
-    }
+    alert('注册成功，请登录')
+    router.push('/login')
   } catch (err) {
-    console.error('登录错误', err)
+    console.error('注册错误', err)
     alert('无法连接到服务器')
   } finally {
     isSubmitting.value = false
   }
 }
 
-const showForgotPassword = () => {
-  alert('密码重置功能正在开发中，敬请期待！')
-}
-
-const navigateToRegister = () => {
-  router.push('/register')
-}
+const navigateToLogin = () => router.push('/login')
 </script>
 
 <style scoped>
