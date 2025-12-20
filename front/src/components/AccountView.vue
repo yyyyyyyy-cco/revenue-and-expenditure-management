@@ -5,7 +5,7 @@
       <div class="header-content">
         <div class="logo">
           <el-icon size="24" color="#fff"><Wallet /></el-icon>
-          <span class="logo-text">账单管理系统</span>
+          <span class="logo-text">个人收支管理系统</span>
         </div>
         <div class="user-info">
           <el-icon size="18" color="#fff"><User /></el-icon>
@@ -73,10 +73,10 @@
               <el-form-item label="分类">
                 <el-select v-model="filterForm.category" placeholder="全部" class="filter-input">
                   <el-option
-                    v-for="item in categories"
-                    :key="item"
-                    :label="item"
-                    :value="item"
+                    v-for="item in filterCategories"
+                    :key="item.id"
+                    :label="item.name"
+                    :value="item.id"
                   ></el-option>
                 </el-select>
               </el-form-item>
@@ -93,7 +93,7 @@
 
           <!-- 账单表格 -->
           <el-table
-            :data="filteredBills"
+            :data="billList"
             border
             stripe
             hover
@@ -106,7 +106,7 @@
                 <el-tag :type="scope.row.type === '收入' ? 'success' : 'danger'">{{ scope.row.type }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="category" label="分类" width="120"></el-table-column>
+            <el-table-column prop="category_name" label="分类" width="120"></el-table-column>
             <el-table-column prop="amount" label="金额(元)" width="120">
               <template #default="scope">
                 <span :class="scope.row.type === '收入' ? 'income-amount' : 'expense-amount'">
@@ -172,10 +172,10 @@
               <el-form-item label="分类" prop="category">
                 <el-select v-model="billForm.category" placeholder="请选择分类" class="form-select">
                   <el-option
-                    v-for="item in categories"
-                    :key="item"
-                    :label="item"
-                    :value="item"
+                    v-for="item in formCategories"
+                    :key="item.id"
+                    :label="item.name"
+                    :value="item.id"
                   ></el-option>
                 </el-select>
               </el-form-item>
@@ -220,9 +220,19 @@
           </el-card>
         </div>
 
-        <!-- 收支统计页面（占位） -->
-        <div v-if="activePage === '3'" class="page-content empty-page">
-          <el-empty description="统计功能正在开发中，敬请期待"></el-empty>
+        <!-- 收支统计页面 -->
+        <div v-if="activePage === '3'" class="page-content stats-page">
+          <el-card class="filter-card" style="margin-bottom: 16px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <el-date-picker v-model="statsMonth" type="month" placeholder="选择月份" format="YYYY-MM" value-format="YYYY-MM" />
+              <el-button type="primary" @click="fetchCategoryRatio">刷新</el-button>
+              <div style="margin-left: auto; color: #909399">总计：{{ statsTotal | numberFormat }}</div>
+            </div>
+          </el-card>
+
+          <el-card class="filter-card">
+            <div ref="chartRef" class="pie-chart" style="height:420px; width:100%;"></div>
+          </el-card>
         </div>
 
         <!-- 修改账单弹窗 -->
@@ -249,10 +259,10 @@
             <el-form-item label="分类" prop="category">
               <el-select v-model="billForm.category" placeholder="请选择分类" class="form-select">
                 <el-option
-                  v-for="item in categories"
-                  :key="item"
-                  :label="item"
-                  :value="item"
+                  v-for="item in formCategories"
+                  :key="item.id"
+                  :label="item.name"
+                  :value="item.id"
                 ></el-option>
               </el-select>
             </el-form-item>
@@ -299,13 +309,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Menu, Plus, Wallet, User, Search, Refresh, Edit, Delete, 
   Check, DataAnalysis 
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
+import * as echarts from 'echarts'
 
 // 侧边栏切换页面
 const activePage = ref('1')
@@ -316,38 +327,24 @@ const handleMenuSelect = (index) => {
   }
 }
 
-// 账单分类列表
-const categories = ref(['餐饮', '交通', '工资', '购物', '娱乐', '其他'])
+// 账单分类（从后端获取）
+const categories = ref([])
 
-// 模拟账单数据
-const billList = ref([
-  {
-    id: 1,
-    type: '收入',
-    category: '工资',
-    amount: 8000,
-    date: '2025-12-01',
-    remark: '12月工资'
-  },
-  {
-    id: 2,
-    type: '支出',
-    category: '餐饮',
-    amount: 200,
-    date: '2025-12-05',
-    remark: '午餐'
-  },
-  {
-    id: 3,
-    type: '支出',
-    category: '交通',
-    amount: 50,
-    date: '2025-12-05',
-    remark: '打车'
-  }
-])
+// 账单数据（从后端获取）
+const billList = ref([])
+const totalBills = ref(0)
 
-// 筛选表单
+onMounted(() => {
+  document.body.classList.add('full-width-app')
+  fetchCategories()
+  fetchBills()
+})
+
+onUnmounted(() => {
+  document.body.classList.remove('full-width-app')
+})
+
+// 筛选表单（category 存储 category_id）
 const filterForm = reactive({
   month: '',
   type: '',
@@ -357,45 +354,124 @@ const filterForm = reactive({
 // 分页参数
 const pagination = reactive({
   currentPage: 1,
-  pageSize: 5
+  pageSize: 10
 })
 
-// 总账单数（用于分页）
-const totalBills = computed(() => {
-  let result = [...billList.value]
-  if (filterForm.month) {
-    result = result.filter(item => dayjs(item.date).format('YYYY-MM') === filterForm.month)
-  }
-  if (filterForm.type) {
-    result = result.filter(item => item.type === filterForm.type)
-  }
-  if (filterForm.category) {
-    result = result.filter(item => item.category === filterForm.category)
-  }
-  return result.length
-})
+const API_BASE = 'http://localhost:3000'
+const token = localStorage.getItem('token') || ''
 
-// 筛选后的账单列表
-const filteredBills = computed(() => {
-  let result = [...billList.value]
-  if (filterForm.month) {
-    result = result.filter(item => dayjs(item.date).format('YYYY-MM') === filterForm.month)
+// 统计相关
+const statsMonth = ref(new Date().toISOString().slice(0,7))
+const statsData = ref([])
+const statsTotal = ref(0)
+const chartRef = ref(null)
+let chartInstance = null
+
+const fetchCategoryRatio = async () => {
+  try {
+    const params = new URLSearchParams()
+    if (statsMonth.value) params.append('month', statsMonth.value)
+    const res = await fetch(`${API_BASE}/api/stat/category-ratio?${params.toString()}`, {
+      headers: token ? { Authorization: 'Bearer ' + token } : {}
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      ElMessage.error(data.error || '获取分类占比失败')
+      return
+    }
+    statsData.value = data.map(r => ({ name: r.category_name, value: Number(r.value) }))
+    statsTotal.value = statsData.value.reduce((s, i) => s + (i.value || 0), 0)
+    await nextTick()
+    renderChart()
+  } catch (err) {
+    console.error('fetchCategoryRatio error', err)
+    ElMessage.error('无法连接到服务器')
   }
-  if (filterForm.type) {
-    result = result.filter(item => item.type === filterForm.type)
+}
+
+const renderChart = () => {
+  if (!chartRef.value) return
+  if (!chartInstance) chartInstance = echarts.init(chartRef.value)
+  const option = {
+    tooltip: { trigger: 'item' },
+    legend: { orient: 'vertical', left: 'left' },
+    series: [
+      {
+        name: '支出分类',
+        type: 'pie',
+        radius: ['40%', '70%'],
+        avoidLabelOverlap: false,
+        itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+        label: { show: false, position: 'center' },
+        emphasis: { label: { show: true, fontSize: '18', fontWeight: 'bold' } },
+        labelLine: { show: false },
+        data: statsData.value
+      }
+    ]
   }
-  if (filterForm.category) {
-    result = result.filter(item => item.category === filterForm.category)
+  chartInstance.setOption(option)
+}
+
+watch(statsMonth, () => fetchCategoryRatio())
+
+// 获取分类
+const fetchCategories = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/categories`)
+    const data = await res.json()
+    if (!res.ok) {
+      ElMessage.error('获取分类失败')
+      return
+    }
+    // 去重（以 type+name 为准），并按 type/name 排序
+    const map = new Map()
+    data.forEach(c => {
+      if (c && c.name) {
+        const key = `${c.type}|${c.name}`
+        if (!map.has(key)) map.set(key, c)
+      }
+    })
+    categories.value = Array.from(map.values()).sort((a, b) => {
+      if (a.type === b.type) return a.name.localeCompare(b.name)
+      return a.type.localeCompare(b.type)
+    })
+  } catch (err) {
+    console.error('fetchCategories error', err)
+    ElMessage.error('无法获取分类')
   }
-  const start = (pagination.currentPage - 1) * pagination.pageSize
-  const end = start + pagination.pageSize
-  return result.slice(start, end)
-})
+}
+
+// 获取账单列表
+const fetchBills = async () => {
+  try {
+    const params = new URLSearchParams()
+    params.append('page', pagination.currentPage)
+    params.append('limit', pagination.pageSize)
+    if (filterForm.month) params.append('month', filterForm.month)
+    if (filterForm.type) params.append('type', filterForm.type === '收入' ? 'income' : 'expense')
+    if (filterForm.category) params.append('category_id', filterForm.category)
+
+    const res = await fetch(`${API_BASE}/api/bills?${params.toString()}`, {
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      ElMessage.error(data.error || '获取账单失败')
+      return
+    }
+    // 后端返回 data.data 和 pagination
+    billList.value = data.data.map(item => ({ ...item, type: item.type === 'income' ? '收入' : '支出' }))
+    totalBills.value = data.pagination?.total || 0
+  } catch (err) {
+    console.error('fetchBills error', err)
+    ElMessage.error('无法连接到服务器')
+  }
+}
 
 // 筛选事件
 const handleFilter = () => {
   pagination.currentPage = 1
-  ElMessage.success('筛选成功')
+  fetchBills()
 }
 
 // 重置筛选条件
@@ -404,14 +480,17 @@ const resetFilter = () => {
   filterForm.type = ''
   filterForm.category = ''
   pagination.currentPage = 1
+  fetchBills()
 }
 
 // 分页事件
 const handleSizeChange = (val) => {
   pagination.pageSize = val
+  fetchBills()
 }
 const handleCurrentChange = (val) => {
   pagination.currentPage = val
+  fetchBills()
 }
 
 // 账单表单
@@ -423,6 +502,20 @@ const billForm = reactive({
   amount: '',
   date: '',
   remark: ''
+})
+
+// 根据筛选类型动态过滤分类（筛选下拉使用）
+const filterCategories = computed(() => {
+  if (!filterForm.type) return categories.value
+  const t = filterForm.type === '收入' ? 'income' : 'expense'
+  return categories.value.filter(c => c.type === t)
+})
+
+// 根据表单选择的类型动态过滤分类（添加/编辑表单使用）
+const formCategories = computed(() => {
+  if (!billForm.type) return categories.value
+  const t = billForm.type === '收入' ? 'income' : 'expense'
+  return categories.value.filter(c => c.type === t)
 })
 
 // 表单校验规则
@@ -448,20 +541,37 @@ const resetForm = () => {
 }
 
 // 提交添加账单
-const handleSubmit = () => {
-  billFormRef.value.validate((valid) => {
-    if (valid) {
-      const newId = Math.max(...billList.value.map(item => item.id), 0) + 1
-      billList.value.push({
-        id: newId,
-        ...{ ...billForm }
+const handleSubmit = async () => {
+  billFormRef.value.validate(async (valid) => {
+    if (!valid) {
+      ElMessage.error('请完善表单信息')
+      return false
+    }
+    try {
+      const body = {
+        type: billForm.type === '收入' ? 'income' : 'expense',
+        amount: Number(billForm.amount),
+        category_id: billForm.category || null,
+        date: billForm.date,
+        remark: billForm.remark
+      }
+      const res = await fetch(`${API_BASE}/api/bills`, {
+        method: 'POST',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { Authorization: 'Bearer ' + token } : {}),
+        body: JSON.stringify(body)
       })
+      const data = await res.json()
+      if (!res.ok) {
+        ElMessage.error(data.error || '添加失败')
+        return
+      }
       ElMessage.success('账单添加成功')
       activePage.value = '1'
       resetForm()
-    } else {
-      ElMessage.error('请完善表单信息')
-      return false
+      fetchBills()
+    } catch (err) {
+      console.error('handleSubmit error', err)
+      ElMessage.error('无法连接到服务器')
     }
   })
 }
@@ -470,8 +580,8 @@ const handleSubmit = () => {
 const editDialogVisible = ref(false)
 const handleEdit = (row) => {
   billForm.id = row.id
-  billForm.type = row.type
-  billForm.category = row.category
+  billForm.type = row.type === '收入' ? '收入' : '支出'
+  billForm.category = row.category_id || ''
   billForm.amount = row.amount
   billForm.date = row.date
   billForm.remark = row.remark
@@ -479,18 +589,36 @@ const handleEdit = (row) => {
 }
 
 // 提交修改账单
-const handleEditSubmit = () => {
-  billFormRef.value.validate((valid) => {
-    if (valid) {
-      const index = billList.value.findIndex(item => item.id === billForm.id)
-      if (index > -1) {
-        billList.value[index] = { ...billForm }
-        ElMessage.success('账单修改成功')
-        editDialogVisible.value = false
-      }
-    } else {
+const handleEditSubmit = async () => {
+  billFormRef.value.validate(async (valid) => {
+    if (!valid) {
       ElMessage.error('请完善表单信息')
       return false
+    }
+    try {
+      const body = {
+        type: billForm.type === '收入' ? 'income' : 'expense',
+        amount: Number(billForm.amount),
+        category_id: billForm.category || null,
+        date: billForm.date,
+        remark: billForm.remark
+      }
+      const res = await fetch(`${API_BASE}/api/bills/${billForm.id}`, {
+        method: 'PUT',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { Authorization: 'Bearer ' + token } : {}),
+        body: JSON.stringify(body)
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        ElMessage.error(data.error || '更新失败')
+        return
+      }
+      ElMessage.success('账单修改成功')
+      editDialogVisible.value = false
+      fetchBills()
+    } catch (err) {
+      console.error('handleEditSubmit error', err)
+      ElMessage.error('无法连接到服务器')
     }
   })
 }
@@ -505,16 +633,34 @@ const handleDelete = (id) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    const index = billList.value.findIndex(item => item.id === id)
-    if (index > -1) {
-      billList.value.splice(index, 1)
+  ).then(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/bills/${id}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: 'Bearer ' + token } : {}
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        ElMessage.error(data.error || '删除失败')
+        return
+      }
       ElMessage.success('账单删除成功')
+      fetchBills()
+    } catch (err) {
+      console.error('handleDelete error', err)
+      ElMessage.error('无法连接到服务器')
     }
   }).catch(() => {
     ElMessage.info('已取消删除')
   })
 }
+
+  onUnmounted(() => {
+    if (chartInstance) {
+      chartInstance.dispose()
+      chartInstance = null
+    }
+  })
 </script>
 
 <style scoped>
@@ -535,6 +681,29 @@ html, body {
   display: flex;
   flex-direction: column;
   background-color: #f5f7fa;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 在 full-width 模式下取消内部所有卡片的圆角 */
+:deep(body.full-width-app) .filter-card,
+:deep(body.full-width-app) .bill-table,
+:deep(body.full-width-app) .form-card {
+  border-radius: 0 !important;
+}
+
+/* 在 full-width 模式下使添加/编辑表单卡片横向铺满 */
+:deep(body.full-width-app) .form-card {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+:deep(body.full-width-app) .page-content {
+  width: 100% !important;
+  padding-left: 20px !important;
+  padding-right: 20px !important;
 }
 
 /* 顶栏样式 */
@@ -607,6 +776,7 @@ html, body {
   padding: 20px;
   overflow-y: auto;
   background-color: #f5f7fa;
+  scrollbar-gutter: stable;
 }
 
 /* 页面标题 */
@@ -631,6 +801,11 @@ html, body {
 /* 页面内容容器 */
 .page-content {
   width: 100%;
+}
+
+.pie-chart {
+  width: 100%;
+  height: 420px;
 }
 
 /* 筛选卡片样式 */
@@ -706,6 +881,16 @@ html, body {
   padding: 20px;
   max-width: 800px;
   margin: 0 auto;
+}
+
+/* 确保添加/编辑页面的卡片在页面内容容器中横向铺满 */
+.page-content .form-card {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  padding-left: 20px !important;
+  padding-right: 20px !important;
 }
 
 .bill-form {
