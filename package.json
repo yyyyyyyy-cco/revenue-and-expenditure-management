@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "description": "收支管理系统 Root",
     "scripts": {
-        "dev": "npx concurrently -k -n \"后端,前端\" -c \"blue,green\" \"cd backend && npm run dev\" \"cd front && npm run dev\"",
+        "dev": "npx concurrently -n \"后端,前端\" -c \"blue,green\" \"cd backend && npm run dev\" \"cd front && npm run dev\"",
         "start": "node -e \"const s = process.platform === 'win32' ? 'dev.bat' : './dev.sh'; require('child_process').execSync(s, {stdio: 'inherit'})\"",
         "install:all": "cd backend && npm install && cd ../front && npm install"
     },

@@ -26,8 +26,8 @@ fi
 # 修复 sqlite3 原生模块问题
 node -e "try { require('./backend/node_modules/sqlite3') } catch (e) { process.exit(1) }" 2>/dev/null
 if [ $? -ne 0 ]; then
-    echo -e "${YELLOW}[警告] 检测到数据库驱动不兼容，正在重新编译 sqlite3...${NC}"
-    (cd backend && npm rebuild sqlite3)
+    echo -e "${YELLOW}[警告] 检测到数据库驱动不兼容，正在重新安装 sqlite3...${NC}"
+    (cd backend && rm -rf node_modules/sqlite3 && npm install sqlite3)
 fi
 
 if [ ! -f "backend/expense_manager.db" ]; then
@@ -43,6 +43,6 @@ if [ ! -d "front/node_modules" ]; then
 fi
 
 echo -e "${GREEN}>>> 准备就绪，正在启动服务器...${NC}"
-npx concurrently -k -n "后端,前端" -c "blue,green" \
+npx concurrently -n "后端,前端" -c "blue,green" \
     "cd backend && npm run dev" \
     "cd front && npm run dev"

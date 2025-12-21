@@ -21,8 +21,13 @@ if not exist "backend\node_modules\" (
 REM 修复 sqlite3 原生模块问题
 node -e "try { require('./backend/node_modules/sqlite3') } catch (e) { process.exit(1) }" 2>nul
 if %errorlevel% neq 0 (
-    echo [警告] 检测到数据库驱动不兼容，正在重新编译 sqlite3...
-    cd backend && call npm rebuild sqlite3 && cd ..
+    echo [警告] 检测到数据库驱动不兼容，正在尝试重新安装 sqlite3...
+    cd backend
+    if exist "node_modules\sqlite3" (
+        rmdir /s /q "node_modules\sqlite3"
+    )
+    call npm install sqlite3
+    cd ..
 )
 
 if not exist "backend\expense_manager.db" (
@@ -38,4 +43,4 @@ if not exist "front\node_modules\" (
 )
 
 echo >>> 准备就绪，正在启动服务器...
-call npx concurrently -k -n "后端,前端" -c "blue,green" "cd backend && npm run dev" "cd front && npm run dev"
+call npx concurrently -n "后端,前端" -c "blue,green" "cd backend && npm run dev" "cd front && npm run dev"
