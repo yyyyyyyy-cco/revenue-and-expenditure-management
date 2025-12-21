@@ -37,6 +37,10 @@
             <el-icon><DataAnalysis /></el-icon>
             <span slot="title">收支统计</span>
           </el-menu-item>
+          <el-menu-item index="4">
+            <el-icon><Upload /></el-icon>
+            <span slot="title">账单导入</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
@@ -44,9 +48,14 @@
       <el-main class="content">
         <!-- 页面标题 -->
         <div class="page-header">
-          <h2 class="page-title">{{ activePage === '1' ? '账单列表' : activePage === '2' ? '添加账单' : '收支统计' }}</h2>
+          <h2 class="page-title">{{ activePage === '1' ? '账单列表' : activePage === '2' ? '添加账单' : activePage === '3' ? '收支统计' : '账单导入' }}</h2>
           <el-divider direction="vertical"></el-divider>
-          <span class="page-desc">{{ activePage === '1' ? '查看、筛选、管理所有账单' : activePage === '2' ? '录入新的收支账单' : '暂无统计数据，敬请期待' }}</span>
+          <span class="page-desc">{{ 
+            activePage === '1' ? '查看、筛选、管理所有账单' : 
+            activePage === '2' ? '录入新的收支账单' : 
+            activePage === '3' ? '暂无统计数据，敬请期待' :
+            '从支付宝或微信生成的 CSV 文件导入账单'
+          }}</span>
         </div>
 
         <!-- 账单列表页面 -->
@@ -235,6 +244,59 @@
           </el-card>
         </div>
 
+        <!-- 账单导入页面 -->
+        <div v-if="activePage === '4'" class="page-content">
+          <el-card class="import-card">
+            <div class="import-tip">
+              <el-alert
+                title="导入说明"
+                type="info"
+                description="支持支付宝（CSV）和微信（CSV）导出的对账单。系统会自动识别分类并去除重复账单。"
+                show-icon
+                :closable="false"
+              />
+            </div>
+            
+            <div class="upload-container">
+              <el-upload
+                class="bill-uploader"
+                drag
+                :action="API_BASE + '/api/bills/import'"
+                :headers="{ Authorization: 'Bearer ' + token }"
+                :on-success="handleUploadSuccess"
+                :on-error="handleUploadError"
+                :before-upload="beforeUpload"
+                multiple
+                name="file"
+                accept=".csv"
+              >
+                <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+                <div class="el-upload__text">
+                  将文件拖到此处，或 <em>点击上传</em>
+                </div>
+                <template #tip>
+                  <div class="el-upload__tip">
+                    只能上传 CSV 文件，建议单次上传文件不超过 10MB
+                  </div>
+                </template>
+              </el-upload>
+            </div>
+
+            <!-- 导入结果统计 -->
+            <div v-if="importResults" class="import-results">
+              <el-divider>最近一次导入结果</el-divider>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-statistic title="成功导入" :value="importResults.imported" />
+                </el-col>
+                <el-col :span="12">
+                  <el-statistic title="重复/跳过" :value="importResults.duplicate" />
+                </el-col>
+              </el-row>
+            </div>
+          </el-card>
+        </div>
+
         <!-- 修改账单弹窗 -->
         <el-dialog
           v-model="editDialogVisible"
@@ -313,7 +375,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Menu, Plus, Wallet, User, Search, Refresh, Edit, Delete, 
-  Check, DataAnalysis 
+  Check, DataAnalysis, Upload, UploadFilled
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import * as echarts from 'echarts'
@@ -655,6 +717,62 @@ const handleDelete = (id) => {
   })
 }
 
+// 账单导入相关逻辑
+const importResults = ref(null)
+
+/**
+ * 上传前的校验
+ * @param {File} file - 待上传的文件
+ */
+const beforeUpload = (file) => {
+  const isCSV = file.name.toLowerCase().endsWith('.csv')
+  const isLt10M = file.size / 1024 / 1024 < 10
+
+  if (!isCSV) {
+    ElMessage.error('只能上传 CSV 格式的文件')
+    return false
+  }
+  if (!isLt10M) {
+    ElMessage.error('文件大小不能超过 10MB')
+    return false
+  }
+  return true
+}
+
+/**
+ * 上传成功处理程序
+ * @param {Object} response - 后端返回的 JSON 数据
+ */
+const handleUploadSuccess = (response) => {
+  ElMessage.success('账单解析并导入完成')
+  importResults.value = {
+    imported: response.imported,
+    duplicate: response.duplicate
+  }
+  // 导入成功后刷新账单列表
+  if (activePage.value === '4') {
+    // 延迟切换到列表页，让用户看清统计结果
+    setTimeout(() => {
+      activePage.value = '1'
+      fetchBills()
+    }, 2000)
+  }
+}
+
+/**
+ * 上传失败处理程序
+ * @param {Error} err - 错误对象
+ */
+const handleUploadError = (err) => {
+  console.error('Upload error:', err)
+  try {
+    const errorData = JSON.parse(err.message)
+    ElMessage.error(errorData.error || '上传或解析失败')
+  } catch (e) {
+    ElMessage.error('无法连接到服务器或文件解析出错')
+  }
+}
+
   onUnmounted(() => {
     if (chartInstance) {
       chartInstance.dispose()
@@ -796,6 +914,43 @@ html, body {
 .page-desc {
   font-size: 14px;
   color: #909399;
+}
+
+/* 导入页面样式 */
+.import-card {
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.import-tip {
+  margin-bottom: 24px;
+}
+
+.upload-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.bill-uploader {
+  width: 100%;
+  max-width: 600px;
+}
+
+.import-results {
+  margin-top: 30px;
+  text-align: center;
+}
+
+:deep(.el-statistic__title) {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+:deep(.el-statistic__content) {
+  font-size: 24px;
+  font-weight: bold;
+  color: #409eff;
 }
 
 /* 页面内容容器 */
