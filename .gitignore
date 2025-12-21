@@ -1,0 +1,34 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Mac
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+# Database
+*.db
+*.db-journal
+
+# Compiled/Build
+dist/
+build/
+.vite/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Subdirectories
+backend/node_modules/
+front/node_modules/
+front/dist/
+backend/uploads/*
+!backend/uploads/.gitkeep

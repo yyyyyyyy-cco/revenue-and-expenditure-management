@@ -27,12 +27,14 @@ const authRoutes = require('./routes/authRoutes');
 const billRoutes = require('./routes/billRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const statRoutes = require('./routes/statRoutes');
+const recurringBillRoutes = require('./routes/recurringBillRoutes');
 
 // 挂载路由到指定路径
 app.use('/api/auth', authRoutes);       // 用户认证相关 (注册、登录、资料修改)
 app.use('/api/bills', billRoutes);      // 账单管理相关 (增删改查)
 app.use('/api/categories', categoryRoutes); // 分类管理相关 (获取分类列表)
-app.use('/api/stats', statRoutes);      // 统计分析相关 (月度、趋势、占比)
+app.use('/api/stat', statRoutes);            // 统计分析相关 (月度、趋势、占比)
+app.use('/api/recurring-bills', recurringBillRoutes); // 周期账单相关
 
 // --- 启动服务器 ---
 

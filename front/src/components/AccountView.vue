@@ -41,6 +41,10 @@
             <el-icon><Upload /></el-icon>
             <span slot="title">账单导入</span>
           </el-menu-item>
+          <el-menu-item index="5">
+            <el-icon><Calendar /></el-icon>
+            <span slot="title">周期管理</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
@@ -48,13 +52,20 @@
       <el-main class="content">
         <!-- 页面标题 -->
         <div class="page-header">
-          <h2 class="page-title">{{ activePage === '1' ? '账单列表' : activePage === '2' ? '添加账单' : activePage === '3' ? '收支统计' : '账单导入' }}</h2>
+          <h2 class="page-title">{{ 
+            activePage === '1' ? '账单列表' : 
+            activePage === '2' ? '添加账单' : 
+            activePage === '3' ? '收支统计' : 
+            activePage === '4' ? '账单导入' : 
+            '周期管理' 
+          }}</h2>
           <el-divider direction="vertical"></el-divider>
           <span class="page-desc">{{ 
             activePage === '1' ? '查看、筛选、管理所有账单' : 
             activePage === '2' ? '录入新的收支账单' : 
-            activePage === '3' ? '暂无统计数据，敬请期待' :
-            '从支付宝或微信生成的 CSV 文件导入账单'
+            activePage === '3' ? '可视化分析您的收支趋势' :
+            activePage === '4' ? '从支付宝或微信生成的 CSV 文件导入账单' :
+            '管理工资、会员等固定周期的收支项目'
           }}</span>
         </div>
 
@@ -239,8 +250,9 @@
             </div>
           </el-card>
 
-          <el-card class="filter-card">
-            <div ref="chartRef" class="pie-chart" style="height:420px; width:100%;"></div>
+          <el-card class="filter-card" style="margin-top: 20px;">
+            <div slot="header"><span>收支趋势 (最近6个月)</span></div>
+            <div ref="trendChartRef" class="trend-chart" style="height:420px; width:100%;"></div>
           </el-card>
         </div>
 
@@ -295,6 +307,73 @@
               </el-row>
             </div>
           </el-card>
+        </div>
+
+        <!-- 周期管理页面 -->
+        <div v-if="activePage === '5'" class="page-content">
+          <el-row :gutter="20">
+            <!-- 添加周期规则 -->
+            <el-col :span="8">
+              <el-card class="box-card">
+                <template #header><div class="card-header"><span>新增周期任务</span></div></template>
+                <el-form :model="recurringForm" :rules="recurringRules" ref="recurringFormRef" label-position="top">
+                  <el-form-item label="收支类型" prop="type">
+                    <el-radio-group v-model="recurringForm.type">
+                      <el-radio label="income">收入</el-radio>
+                      <el-radio label="expense">支出</el-radio>
+                    </el-radio-group>
+                  </el-form-item>
+                  <el-form-item label="分类" prop="category_id">
+                    <el-select v-model="recurringForm.category_id" placeholder="请选择分类" style="width:100%">
+                      <el-option v-for="c in categories.filter(x => x.type === recurringForm.type)" :key="c.id" :label="c.name" :value="c.id" />
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item label="金额" prop="amount">
+                    <el-input v-model.number="recurringForm.amount" type="number" placeholder="0.00" />
+                  </el-form-item>
+                  <el-form-item label="周期" prop="period">
+                    <el-select v-model="recurringForm.period" style="width:100%">
+                      <el-option label="每天" value="daily" />
+                      <el-option label="每周" value="weekly" />
+                      <el-option label="每月" value="monthly" />
+                      <el-option label="每年" value="yearly" />
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item label="下次执行日期" prop="next_date">
+                    <el-date-picker v-model="recurringForm.next_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+                  </el-form-item>
+                  <el-form-item label="备注">
+                    <el-input v-model="recurringForm.remark" type="textarea" />
+                  </el-form-item>
+                  <el-button type="primary" @click="handleCreateRecurring" block>保存规则</el-button>
+                </el-form>
+              </el-card>
+            </el-col>
+            <!-- 规则列表 -->
+            <el-col :span="16">
+              <el-card class="box-card">
+                <template #header><div class="card-header"><span>我的周期规则</span></div></template>
+                <el-table :data="recurringList" style="width: 100%" empty-text="暂无周期规则">
+                  <el-table-column prop="type" label="类型" width="80">
+                    <template #default="s"><el-tag :type="s.row.type === 'income' ? 'success' : 'danger'">{{ s.row.type === 'income' ? '收入' : '支出' }}</el-tag></template>
+                  </el-table-column>
+                  <el-table-column prop="category_name" label="分类" />
+                  <el-table-column prop="amount" label="金额">
+                    <template #default="s">￥{{ s.row.amount.toFixed(2) }}</template>
+                  </el-table-column>
+                  <el-table-column prop="period" label="周期">
+                    <template #default="s">{{ {daily:'每天', weekly:'每周', monthly:'每月', yearly:'每年'}[s.row.period] }}</template>
+                  </el-table-column>
+                  <el-table-column prop="next_date" label="下次执行" />
+                  <el-table-column label="操作" width="100">
+                    <template #default="s">
+                      <el-button type="danger" size="small" @click="handleDeleteRecurring(s.row.id)">删除</el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </el-card>
+            </el-col>
+          </el-row>
         </div>
 
         <!-- 修改账单弹窗 -->
@@ -375,7 +454,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Menu, Plus, Wallet, User, Search, Refresh, Edit, Delete, 
-  Check, DataAnalysis, Upload, UploadFilled
+  Check, DataAnalysis, Upload, UploadFilled, Calendar
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import * as echarts from 'echarts'
@@ -386,6 +465,13 @@ const handleMenuSelect = (index) => {
   activePage.value = index
   if (index === '2') {
     resetForm()
+  }
+  if (index === '3') {
+    fetchCategoryRatio()
+    fetchTrendData()
+  }
+  if (index === '5') {
+    fetchRecurringBills()
   }
 }
 
@@ -400,6 +486,8 @@ onMounted(() => {
   document.body.classList.add('full-width-app')
   fetchCategories()
   fetchBills()
+  // 页面加载时自动处理本用户到期的周期账单
+  processRecurringOnLoad()
 })
 
 onUnmounted(() => {
@@ -427,7 +515,9 @@ const statsMonth = ref(new Date().toISOString().slice(0,7))
 const statsData = ref([])
 const statsTotal = ref(0)
 const chartRef = ref(null)
+const trendChartRef = ref(null)
 let chartInstance = null
+let trendChartInstance = null
 
 const fetchCategoryRatio = async () => {
   try {
@@ -472,6 +562,35 @@ const renderChart = () => {
     ]
   }
   chartInstance.setOption(option)
+}
+
+const fetchTrendData = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/stat/trend`, {
+      headers: token ? { Authorization: 'Bearer ' + token } : {}
+    })
+    const data = await res.json()
+    if (!res.ok) return
+    renderTrendChart(data)
+  } catch (err) {
+    console.error('fetchTrendData error', err)
+  }
+}
+
+const renderTrendChart = (data) => {
+  if (!trendChartRef.value) return
+  if (!trendChartInstance) trendChartInstance = echarts.init(trendChartRef.value)
+  const option = {
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['收入', '支出'] },
+    xAxis: { type: 'category', data: data.map(i => i.month) },
+    yAxis: { type: 'value' },
+    series: [
+      { name: '收入', type: 'bar', color: '#67C23A', data: data.map(i => i.income) },
+      { name: '支出', type: 'bar', color: '#F56C6C', data: data.map(i => i.expense) }
+    ]
+  }
+  trendChartInstance.setOption(option)
 }
 
 watch(statsMonth, () => fetchCategoryRatio())
@@ -773,10 +892,79 @@ const handleUploadError = (err) => {
   }
 }
 
+// --- 周期性账单相关逻辑 ---
+
+const recurringList = ref([])
+const recurringFormRef = ref(null)
+const recurringForm = reactive({
+  type: 'expense',
+  category_id: '',
+  amount: '',
+  period: 'monthly',
+  next_date: dayjs().format('YYYY-MM-DD'),
+  remark: ''
+})
+
+const recurringRules = {
+  amount: [{ required: true, message: '请输入金额', trigger: 'blur' }],
+  next_date: [{ required: true, message: '请选择开始日期', trigger: 'change' }]
+}
+
+const fetchRecurringBills = async () => {
+  const res = await fetch(`${API_BASE}/api/recurring-bills`, {
+    headers: token ? { Authorization: 'Bearer ' + token } : {}
+  })
+  if (res.ok) recurringList.value = await res.json()
+}
+
+const handleCreateRecurring = async () => {
+  recurringFormRef.value.validate(async (valid) => {
+    if (!valid) return
+    const res = await fetch(`${API_BASE}/api/recurring-bills`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify(recurringForm)
+    })
+    if (res.ok) {
+      ElMessage.success('周期规则已创建')
+      fetchRecurringBills()
+      // 清空部分表单
+      recurringForm.amount = ''
+      recurringForm.remark = ''
+    }
+  })
+}
+
+const handleDeleteRecurring = async (id) => {
+  await ElMessageBox.confirm('确定要删除该周期规则吗？')
+  const res = await fetch(`${API_BASE}/api/recurring-bills/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: 'Bearer ' + token }
+  })
+  if (res.ok) {
+    ElMessage.success('规则已删除')
+    fetchRecurringBills()
+  }
+}
+
+const processRecurringOnLoad = async () => {
+  if (!token) return
+  await fetch(`${API_BASE}/api/recurring-bills/process`, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token }
+  })
+  // 处理完如果有新生成的账单，刷新一下列表
+  fetchBills()
+}
+
   onUnmounted(() => {
     if (chartInstance) {
       chartInstance.dispose()
       chartInstance = null
+    }
+    if (trendChartInstance) {
+      trendChartInstance.dispose()
+      trendChartInstance = null
     }
   })
 </script>
