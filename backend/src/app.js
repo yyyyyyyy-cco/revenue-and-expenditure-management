@@ -30,6 +30,20 @@ const statRoutes = require('./routes/statRoutes');
 const recurringBillRoutes = require('./routes/recurringBillRoutes');
 
 // 挂载路由到指定路径
+app.get('/api', (req, res) => {
+    res.json({
+        message: '收支管理系统 API 服务已就绪',
+        status: 'online',
+        endpoints: {
+            auth: '/api/auth',
+            bills: '/api/bills',
+            categories: '/api/categories',
+            stat: '/api/stat',
+            recurring: '/api/recurring-bills'
+        }
+    });
+});
+
 app.use('/api/auth', authRoutes);       // 用户认证相关 (注册、登录、资料修改)
 app.use('/api/bills', billRoutes);      // 账单管理相关 (增删改查)
 app.use('/api/categories', categoryRoutes); // 分类管理相关 (获取分类列表)
