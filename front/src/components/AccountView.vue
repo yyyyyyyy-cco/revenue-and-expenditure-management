@@ -242,18 +242,75 @@
 
         <!-- 收支统计页面 -->
         <div v-if="activePage === '3'" class="page-content stats-page">
-          <el-card class="filter-card" style="margin-bottom: 16px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <el-date-picker v-model="statsMonth" type="month" placeholder="选择月份" format="YYYY-MM" value-format="YYYY-MM" />
-              <el-button type="primary" @click="fetchCategoryRatio">刷新</el-button>
-              <div style="margin-left: auto; color: #909399">总计：{{ statsTotal | numberFormat }}</div>
-            </div>
-          </el-card>
+          <el-row :gutter="20">
+            <!-- 指标概览卡片 -->
+            <el-col :span="6" v-for="card in statOverviewCards" :key="card.title">
+              <el-card shadow="hover" class="stat-overview-card" :body-style="{ padding: '20px' }">
+                <div class="stat-card-content">
+                  <div class="stat-card-info">
+                    <p class="stat-card-title">{{ card.title }}</p>
+                    <h3 class="stat-card-value" :class="card.type">{{ card.value }}</h3>
+                  </div>
+                  <el-icon class="stat-card-icon" :class="card.type"><component :is="card.icon" /></el-icon>
+                </div>
+              </el-card>
+            </el-col>
+          </el-row>
 
-          <el-card class="filter-card" style="margin-top: 20px;">
-            <div slot="header"><span>收支趋势 (最近6个月)</span></div>
-            <div ref="trendChartRef" class="trend-chart" style="height:420px; width:100%;"></div>
-          </el-card>
+          <el-row :gutter="20" style="margin-top: 20px;">
+            <!-- 收支趋势图（折线+柱状） -->
+            <el-col :span="16">
+              <el-card class="chart-card">
+                <template #header>
+                  <div class="chart-header">
+                    <span class="chart-title">收支趋势分析</span>
+                    <el-radio-group v-model="trendGranularity" size="small" @change="fetchTrendData">
+                      <el-radio-button label="week">周</el-radio-button>
+                      <el-radio-button label="month">月</el-radio-button>
+                      <el-radio-button label="year">年</el-radio-button>
+                    </el-radio-group>
+                  </div>
+                </template>
+                <div ref="trendChartRef" class="chart-container" style="height:400px;"></div>
+              </el-card>
+            </el-col>
+
+            <!-- 支出占比饼图 -->
+            <el-col :span="8">
+              <el-card class="chart-card">
+                <template #header>
+                  <div class="chart-header">
+                    <span class="chart-title">支出分类占比</span>
+                    <el-date-picker 
+                      v-model="statsMonth" 
+                      type="month" 
+                      size="small"
+                      placeholder="选择月份" 
+                      format="YYYY-MM" 
+                      value-format="YYYY-MM" 
+                      style="width: 120px"
+                    />
+                  </div>
+                </template>
+                <div ref="chartRef" class="chart-container" style="height:400px;"></div>
+              </el-card>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="20" style="margin-top: 20px;">
+            <!-- 账单来源分布饼图 -->
+            <el-col :span="24">
+              <el-card class="chart-card">
+                <template #header>
+                  <div class="chart-header">
+                    <span class="chart-title">账单来源分布</span>
+                    <el-button type="primary" link size="small" @click="fetchSourceData">刷新</el-button>
+                  </div>
+                </template>
+                <div ref="sourceChartRef" class="chart-container" style="height:350px;"></div>
+              </el-card>
+            </el-col>
+          </el-row>
         </div>
 
         <!-- 账单导入页面 -->
@@ -467,8 +524,10 @@ const handleMenuSelect = (index) => {
     resetForm()
   }
   if (index === '3') {
+    fetchMonthlyOverview()
     fetchCategoryRatio()
     fetchTrendData()
+    fetchSourceData()
   }
   if (index === '5') {
     fetchRecurringBills()
@@ -514,10 +573,51 @@ const token = localStorage.getItem('token') || ''
 const statsMonth = ref(new Date().toISOString().slice(0,7))
 const statsData = ref([])
 const statsTotal = ref(0)
+const trendGranularity = ref('month')
 const chartRef = ref(null)
 const trendChartRef = ref(null)
+const sourceChartRef = ref(null)
 let chartInstance = null
 let trendChartInstance = null
+let sourceChartInstance = null
+
+// 首页概览数据
+const monthlyOverview = reactive({
+  income: 0,
+  expense: 0,
+  balance: 0
+})
+
+const statOverviewCards = computed(() => [
+  { title: '本月总收入', value: '￥' + monthlyOverview.income.toFixed(2), icon: 'ArrowUpBold', type: 'income' },
+  { title: '本月总支出', value: '￥' + monthlyOverview.expense.toFixed(2), icon: 'ArrowDownBold', type: 'expense' },
+  { title: '当前结余', value: '￥' + monthlyOverview.balance.toFixed(2), icon: 'Wallet', type: 'balance' },
+  { title: '分类数', value: categories.value.length, icon: 'Menu', type: 'info' }
+])
+
+// 渐变色配置
+const colors = {
+  income: ['#84fab0', '#8fd3f4'],
+  expense: ['#ff9a9e', '#fecfef'],
+  line: ['#667eea', '#764ba2'],
+  pie: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc']
+}
+
+const fetchMonthlyOverview = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/stat/monthly`, {
+      headers: token ? { Authorization: 'Bearer ' + token } : {}
+    })
+    const data = await res.json()
+    if (res.ok) {
+      monthlyOverview.income = data.total_income
+      monthlyOverview.expense = data.total_expense
+      monthlyOverview.balance = data.balance
+    }
+  } catch (err) {
+    console.error('fetchMonthlyOverview error', err)
+  }
+}
 
 const fetchCategoryRatio = async () => {
   try {
@@ -545,17 +645,17 @@ const renderChart = () => {
   if (!chartRef.value) return
   if (!chartInstance) chartInstance = echarts.init(chartRef.value)
   const option = {
-    tooltip: { trigger: 'item' },
-    legend: { orient: 'vertical', left: 'left' },
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    legend: { bottom: '5%', left: 'center', itemWidth: 10, itemHeight: 10 },
     series: [
       {
         name: '支出分类',
         type: 'pie',
-        radius: ['40%', '70%'],
+        radius: ['50%', '70%'],
         avoidLabelOverlap: false,
-        itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+        itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
         label: { show: false, position: 'center' },
-        emphasis: { label: { show: true, fontSize: '18', fontWeight: 'bold' } },
+        emphasis: { label: { show: true, fontSize: '20', fontWeight: 'bold' } },
         labelLine: { show: false },
         data: statsData.value
       }
@@ -566,7 +666,7 @@ const renderChart = () => {
 
 const fetchTrendData = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/stat/trend`, {
+    const res = await fetch(`${API_BASE}/api/stat/trend?granularity=${trendGranularity.value}`, {
       headers: token ? { Authorization: 'Bearer ' + token } : {}
     })
     const data = await res.json()
@@ -580,17 +680,87 @@ const fetchTrendData = async () => {
 const renderTrendChart = (data) => {
   if (!trendChartRef.value) return
   if (!trendChartInstance) trendChartInstance = echarts.init(trendChartRef.value)
+  
   const option = {
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['收入', '支出'] },
-    xAxis: { type: 'category', data: data.map(i => i.month) },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['收入', '支出', '净收益'] },
+    xAxis: { type: 'category', data: data.map(i => i.period) },
     yAxis: { type: 'value' },
     series: [
-      { name: '收入', type: 'bar', color: '#67C23A', data: data.map(i => i.income) },
-      { name: '支出', type: 'bar', color: '#F56C6C', data: data.map(i => i.expense) }
+      { 
+        name: '收入', 
+        type: 'bar', 
+        barWidth: '20%',
+        itemStyle: { 
+          borderRadius: [4, 4, 0, 0],
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: colors.income[0] },
+            { offset: 1, color: colors.income[1] }
+          ])
+        },
+        data: data.map(i => i.income) 
+      },
+      { 
+        name: '支出', 
+        type: 'bar', 
+        barWidth: '20%',
+        itemStyle: { 
+          borderRadius: [4, 4, 0, 0],
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: colors.expense[0] },
+            { offset: 1, color: colors.expense[1] }
+          ])
+        },
+        data: data.map(i => i.expense) 
+      },
+      {
+        name: '净收益',
+        type: 'line',
+        smooth: true,
+        symbolSize: 8,
+        itemStyle: { color: '#6366f1' },
+        lineStyle: { width: 3, shadowColor: 'rgba(99, 102, 241, 0.3)', shadowBlur: 10 },
+        data: data.map(i => (i.income - i.expense).toFixed(2))
+      }
     ]
   }
   trendChartInstance.setOption(option)
+}
+
+const fetchSourceData = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/stat/source-ratio`, {
+      headers: token ? { Authorization: 'Bearer ' + token } : {}
+    })
+    const data = await res.json()
+    if (res.ok) renderSourceChart(data)
+  } catch (err) {
+    console.error('fetchSourceData error', err)
+  }
+}
+
+const renderSourceChart = (data) => {
+  if (!sourceChartRef.value) return
+  if (!sourceChartInstance) sourceChartInstance = echarts.init(sourceChartRef.value)
+  
+  const option = {
+    tooltip: { trigger: 'item' },
+    legend: { orient: 'vertical', left: 'left' },
+    series: [
+      {
+        name: '账单来源',
+        type: 'pie',
+        radius: '65%',
+        center: ['60%', '50%'],
+        data: data,
+        roseType: 'area',
+        itemStyle: { borderRadius: 8 },
+        emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
+      }
+    ]
+  }
+  sourceChartInstance.setOption(option)
 }
 
 watch(statsMonth, () => fetchCategoryRatio())
@@ -1323,5 +1493,55 @@ html, body {
   .filter-input {
     width: 100%;
   }
+}
+/* 统计页面样式 */
+.stat-overview-card {
+  transition: all 0.3s ease;
+  border: none;
+  border-radius: 12px;
+}
+.stat-overview-card:hover {
+  transform: translateY(-5px);
+}
+.stat-card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.stat-card-title {
+  font-size: 14px;
+  color: #909399;
+  margin: 0;
+}
+.stat-card-value {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 8px 0 0 0;
+}
+.stat-card-icon {
+  font-size: 32px;
+  opacity: 0.8;
+}
+.stat-card-value.income { color: #67C23A; }
+.stat-card-value.expense { color: #F56C6C; }
+.stat-card-value.balance { color: #409EFF; }
+.stat-card-icon.income { color: #67C23A; }
+.stat-card-icon.expense { color: #F56C6C; }
+.stat-card-icon.balance { color: #409EFF; }
+
+.chart-card {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.chart-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
 }
 </style>

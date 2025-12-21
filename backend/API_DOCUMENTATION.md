@@ -245,23 +245,20 @@
   }
   ```
 
-#### 获取收支趋势 (近 6 个月)
+#### 获取收支趋势
 - **URL**: `/stats/trend`
 - **Method**: `GET`
 - **Auth**: 需要
+- **Query Parameters**:
+  - `granularity`: (可选) 时间粒度，可选值为 `week` (本周一至周日的日统计), `month` (最近6个月, 默认), `year` (最近5年)。
 - **Response**:
   ```json
   [
     {
-      "month": "2023-05",
+      "period": "2023-10",
       "income": 4500,
       "expense": 2000
     },
-    {
-      "month": "2023-06",
-      "income": 4800,
-      "expense": 2200
-    }
     // ...
   ]
   ```
@@ -279,9 +276,24 @@
       "category_name": "餐饮",
       "value": 1500
     },
+    // ...
+  ]
+  ```
+
+#### 获取账单来源占比 [NEW]
+- **URL**: `/stats/source-ratio`
+- **Method**: `GET`
+- **Auth**: 需要
+- **Response**:
+  ```json
+  [
     {
-      "category_name": "交通",
-      "value": 500
+      "name": "手动录入",
+      "value": 2500.5
+    },
+    {
+      "name": "支付宝导入",
+      "value": 1200.0
     }
   ]
   ```

@@ -33,30 +33,115 @@ exports.getMonthlyStats = (req, res) => {
 };
 
 /**
- * 获取收支趋势 (最近 6 个月)
+ * 获取收支趋势 (支持周、月、年)
  * 
- * 1. 按月份分组汇总收入和支出
- * 2. 仅返回最近 6 个月的数据
- * 3. 结果按时间正序排列，方便前端绘图
+ * @query granularity: 'week' | 'month' | 'year' (默认 month)
  */
 exports.getTrendStats = (req, res) => {
     const userId = req.userId;
+    const { granularity = 'month' } = req.query;
+
+    let timeFormat;
+    let limit;
+
+    switch (granularity) {
+        case 'week':
+            // 本周 (周一至周日) 的每日统计
+            const now = new Date();
+            const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday...
+            const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const monday = new Date(now);
+            monday.setDate(now.getDate() + diffToMonday);
+            monday.setHours(0, 0, 0, 0);
+            const mondayStr = monday.toISOString().split('T')[0];
+
+            const sqlWeek = `
+                SELECT 
+                    strftime('%Y-%m-%d', date) as date_str,
+                    SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+                    SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense,
+                    CAST((strftime('%w', date) + 6) % 7 AS INTEGER) as weekday_index
+                FROM bills 
+                WHERE user_id = ? AND date >= ?
+                GROUP BY date_str
+                ORDER BY date_str ASC
+            `;
+
+            return db.all(sqlWeek, [userId, mondayStr], (err, rows) => {
+                if (err) return res.status(500).json({ error: '获取周统计失败：' + err.message });
+
+                const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+                const result = weekDays.map((name, index) => {
+                    const found = rows.find(r => r.weekday_index === index);
+                    return {
+                        period: name,
+                        income: found ? found.income : 0,
+                        expense: found ? found.expense : 0
+                    };
+                });
+                res.json(result);
+            });
+
+        case 'year':
+            timeFormat = '%Y';
+            limit = 5; // 最近 5 年
+            break;
+        case 'month':
+        default:
+            timeFormat = '%Y-%m';
+            limit = 6; // 最近 6 个月
+            break;
+    }
 
     const sql = `
         SELECT 
-            strftime('%Y-%m', date) as month,
+            strftime('${timeFormat}', date) as period,
             SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
             SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
         FROM bills 
         WHERE user_id = ?
-        GROUP BY month
-        ORDER BY month DESC
-        LIMIT 6
+        GROUP BY period
+        ORDER BY period DESC
+        LIMIT ?
+    `;
+
+    db.all(sql, [userId, limit], (err, rows) => {
+        if (err) return res.status(500).json({ error: '获取趋势数据失败：' + err.message });
+        res.json(rows.reverse()); // 按时间正序返回
+    });
+};
+
+/**
+ * 获取账单来源占比
+ */
+exports.getSourceStats = (req, res) => {
+    const userId = req.userId;
+
+    const sql = `
+        SELECT 
+            source as name,
+            SUM(amount) as value
+        FROM bills
+        WHERE user_id = ?
+        GROUP BY source
     `;
 
     db.all(sql, [userId], (err, rows) => {
-        if (err) return res.status(500).json({ error: '获取趋势数据失败：' + err.message });
-        res.json(rows.reverse()); // 翻转数组，使其按时间顺序排列
+        if (err) return res.status(500).json({ error: '获取来源占比失败：' + err.message });
+
+        // 映射显示名称
+        const sourceMap = {
+            'system': '手动录入',
+            'alipay': '支付宝导入',
+            'wechat': '微信导入'
+        };
+
+        const result = rows.map(r => ({
+            name: sourceMap[r.name] || r.name,
+            value: Number(r.value.toFixed(2))
+        }));
+
+        res.json(result);
     });
 };
 
