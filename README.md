@@ -1,128 +1,84 @@
-# revenue-and-expenditure-management
+# 收支管理系统 (Revenue and Expenditure Management)
 
-1. 登录（修改密码和用户名）
-2. 账单管理
-   * 添加账单：选择类型（收入/支出）、选择分类（餐饮、交通、工资等）、输入金额、日期、备注。
-   * 删除和修改账单。
-   * 查看账单：分页展示所有账单，支持按月份、类型（收/支）、分类进行筛选。
-38. 统计功能
-   * 本月可用余额，总支出，总收入，总结余。
-   * 多维度收支趋势图：支持**周（显示当前周日期范围）、月、年**粒度切换，包含折线（净收益）与柱状（收入/支出）组合。
-   * **高度自定义**：内置颜色选择器，支持实时自定义趋势图颜色渐变与折线样式。
-   * 支出占比分析：各项支出分类占比（环形图）。
-4. 账单导入 (支付宝/微信 CSV) [已实现]
-   * 支持批量导入、智能分类与自动去重。
-5. 周期性收支管理 [已实现]
-   * 支持自定义周期任务（工资、会员订阅等）。
-   * 系统自动在到期时生成账单。
+本系统是一款基于 **Vue 3** 和 **Node.js** 的全栈财务管理工具，旨在帮助用户高效记录、导入和分析日常收支。
 
 ---
 
-### 🚀 快速启动
+## 🚀 快速启动与脚本使用说明
 
-项目提供了自动化的启动脚本，会自动检查依赖并初始化数据库：
+项目提供了全自动化的启动脚本，会自动检查环境、安装依赖、修复数据库驱动并启动系统：
 
-1. **Windows**: 双击根目录下的 `dev.bat`
-2. **Mac/Linux**: 在终端运行 `./dev.sh`
+- **Mac/Linux 用户**: 
+  ```bash
+  chmod +x dev.sh
+  ./dev.sh
+  ```
+- **Windows 用户**: 
+  直接双击根目录下的 **`dev.bat`**。
 
-脚本将同时启动后端 (3000端口) 与前端 (5173端口)。
+### 脚本功能说明
+* **自动安装依赖**：检测到 `node_modules` 缺失时自动运行 `npm install`。
+* **数据库初始化**：自动检查并生成 `expense_manager.db`。
+* **驱动自愈**：检测到 `sqlite3` 二进制不兼容（如跨平台部署）时自动运行 `npm rebuild`。
+* **一键双开**：通过 `concurrently` 同时启动前端 (5173) 与后端 (3000)。
 
 ---
 
-以下为拓展功能，看时间实现：
+## 🛠️ 已开发功能 (Developed Features)
 
-1. 语音输入收支管理，AI语音识别。
-2. 定时扣款和收入。
+### 1. 核心功能模块
+* **登录与账户管理**：支持用户注册、登录、修改用户名和密码。
+* **账单管理**：支持添加、删除、修改账单，分页展示并提供按月份、类型、分类的深度筛选。
+* **账单导入**：支持支付宝、微信导出的 CSV 账单批量导入，具备智能去重功能。
+* **周期性收支**：支持自定义周期任务（如工资、会员订阅），系统自动到期生成账单。
+
+### 2. 增强统计看板 (Smart Statistics)
+* **多维度趋势分析**：支持“周”、“月”、“年”粒度动态切换。
+  - **周视图**：精准展示周一至周日的日收支对比，并在标题提示具体日期范围。
+  - **混合图表**：柱状图对比收支，折线图跟踪“净收益”变化。
+* **交互式占比图**：支出分类采用环形图展示，支持悬浮查看具体金额与比例。
+* **色彩自定义**：内置颜色选择器，可实时修改收入、支出及净收益的图表配色。
+* **视觉优化**：调整了图例与坐标文字间距，使用渐变色美化 UI。
 
 ---
 
-需求分析
+## ⚙️ 前后端环境配置 (Environment Setup)
 
-一、核心功能模块
+### 1. 环境依赖
+- **Node.js**: 建议使用 v18.x 或更高版本。
+- **npm**: 随 Node.js 一同安装。
+- **SQLite3**: 后端内置，无需安装独立数据库服务。
 
-1. 用户登录与账户管理
+### 2. 首次手动配置 (备选方案)
+如果您不使用一键脚本，请按以下步骤操作：
 
-- 功能描述：实现用户登录、修改用户名和密码。
-- 技术要点：
-  - 前端：使用 Vue3 组建登录页面，包含表单验证。
-  - 后端：Node.js 提供 /login 和 /update-profile 接口，处理用户身份验证与更新。
-  - 数据库：SQLite 存储用户表 users（字段：id, username, password_hash, created_at）。
-  - 安全：密码需加密存储（推荐 bcrypt）。
+#### 后端 (Backend)
+1. 进入目录：`cd backend`
+2. 安装依赖：`npm install`
+3. 初始化数据库：`node src/db/init.js`
+4. 启动启动：`npm run dev`
 
-2. 账单管理
+#### 前端 (Frontend)
+1. 进入目录：`cd front`
+2. 安装依赖：`npm install`
+3. 启动启动：`npm run dev`
 
-- 功能描述：支持添加、删除、修改账单，分页展示并提供筛选功能。
-- 技术要点：
-  - 前端：Vue3 实现账单表单、筛选控件与分页组件。
-  - 后端：Node.js 提供以下接口：
-    - POST /bills：添加账单
-    - GET /bills：获取账单（支持分页、筛选参数）
-    - PUT /bills/:id：更新账单
-    - DELETE /bills/:id：删除账单
-  - 数据库：SQLite 建立 bills 表（字段：id, type, category, amount, date, remark, user_id）。
-  - 筛选支持：按月份、类型（收入/支出）、分类进行筛选。
+---
 
-3. 统计功能
-- 功能描述：提供本月余额、总收入、总支出、总结余、多维度趋势图表、支出占比、来源分布。
-- 技术要点：
-  - 前端：Vue3 结合 ECharts 实现高级可视化，支持周/月/年维度切换。
-  - 后端：Node.js 提供动态统计接口，支持不同粒度聚合。
-  - 数据库：通过 SQL 聚合函数与 strftime 进行时间分析。
+## 📂 项目结构汇总 (Detailed Project Structure)
 
-二、拓展功能模块
-
-1. 支付宝/微信账单导入
-
-- 功能描述：支持导入外部账单并自动去重、分类识别。
-- 技术要点：
-  - 前端：上传文件组件（支持 CSV/Excel）。
-  - 后端：解析文件内容，使用规则或 NLP 模型识别分类，去重逻辑避免重复入库。
-  - 数据库：在 bills 表中新增来源字段 source。
-
-
-2. 定时扣款与收入
-
-- 功能描述：设置周期性收支计划。
-- 技术要点：
-  - 前端：设置周期规则（如每月、每周）。
-  - 后端：Node.js 实现定时任务（使用 node-cron 或 agenda），按规则自动生成账单。
-  - 数据库：新增 recurring_bills 表管理周期规则。
-
-三、技术栈与接口说明
-
-- 前端：Vue3 + Vite + Axios + Element Plus
-- 后端：Node.js + Express + SQLite
-- 接口通信：Axios 负责前后端数据交互，RESTful API 设计
-
-四、数据库设计简要
-
-- users：用户信息表
-- bills：账单主表
-- categories：分类字典表（可选）
-- recurring_bills：周期账单规则表（拓展）
-
-五、后端依赖说明
-
-- **express**: 核心 Web 框架，用于构建 RESTful API。
-- **cors**: 处理跨域请求，允许前端应用访问后端接口。
-- **sqlite3**: 数据库驱动，用于操作 SQLite 数据库文件。
-- **bcryptjs**: 密码加密工具，用于将用户密码进行哈希存储，提高安全性。
-- **jsonwebtoken (JWT)**: 身份验证工具，用于生成和验证用户登录令牌。
-- **nodemon** (开发依赖): 自动重启工具，在代码修改后自动重新启动服务器，提高开发效率。
-
-六、后端项目结构汇总
-
+### 后端 (Backend)
 ```text
 backend/
 ├── src/
 │   ├── app.js               # 后端入口文件，配置中间件和路由挂载
 │   ├── controllers/         # 业务逻辑层
-│   │   ├── authController.js # 用户认证与资料修改逻辑 [NEW]
+│   │   ├── authController.js # 用户认证与资料修改逻辑
 │   │   ├── billController.js # 账单增删改查逻辑
-│   │   ├── categoryController.js # 分类管理逻辑 [NEW]
-│   │   └── statController.js # 统计分析逻辑 [NEW]
-│   ├── middleware/          # 中间件层 [NEW]
-│   │   └── authMiddleware.js # JWT 身份验证中间件 [NEW]
+│   │   ├── categoryController.js # 分类管理逻辑
+│   │   └── statController.js # 统计分析逻辑
+│   ├── middleware/          # 中间件层
+│   │   └── authMiddleware.js # JWT 身份验证中间件
 │   ├── routes/              # 路由层
 │   │   ├── authRoutes.js     # 用户认证路由
 │   │   ├── billRoutes.js     # 账单管理路由
@@ -134,122 +90,37 @@ backend/
 │       └── schema.sql       # 数据库建表 SQL
 ├── expense_manager.db       # SQLite 数据库文件
 ├── database_design.md       # 数据库设计说明文档
-├── test_api_billRoutes.js   # API 测试脚本 (已更新支持 Auth)
 └── package.json             # 项目依赖与脚本配置
 ```
 
-七、后端 API 接口文档
-
-所有接口基础路径为 `/api`。除登录和注册外，所有接口均需要 `Authorization: Bearer <token>` 请求头。
-
-### 1. 用户认证 (Auth)
-
-#### 注册
-- **URL**: `/auth/register`
-- **方法**: `POST`
-- **请求体**:
-  ```json
-  {
-    "username": "testuser",
-    "password": "password123"
-  }
-  ```
-- **响应**: `200 OK`
-
-#### 登录
-- **URL**: `/auth/login`
-- **方法**: `POST`
-- **请求体**:
-  ```json
-  {
-    "username": "testuser",
-    "password": "password123"
-  }
-  ```
-- **响应**:
-  ```json
-  {
-    "message": "登录成功",
-    "token": "eyJhbGciOiJIUzI1..."
-  }
-  ```
-
-#### 修改个人资料
-- **URL**: `/auth/update-profile`
-- **方法**: `PUT`
-  ```json
-  {
-    "username": "newname",
-    "password": "newpassword"
-  }
-  ```
+### 前端 (Frontend)
+```text
+front/
+├── src/
+│   ├── main.js             # 前端入口
+│   ├── router/             # 路由配置
+│   ├── components/         # UI 组件
+│   │   ├── LoginView.vue   # 登录组件
+│   │   ├── RegisterView.vue # 注册组件
+│   │   └── AccountView.vue  # 核心记账与统计页面 (包含 ECharts 逻辑)
+│   └── assets/             # 静态资源
+├── index.html              # 页面模板
+└── package.json            # 前端依赖配置
+```
 
 ---
 
-### 2. 账单管理 (Bills)
-
-#### 获取账单列表
-- **URL**: `/bills`
-- **方法**: `GET`
-- **查询参数**:
-  - `page`: 页码 (默认 1)
-  - `limit`: 每页条数 (默认 10)
-  - `month`: 月份筛选 (格式: YYYY-MM)
-  - `type`: 类型筛选 (`income` 或 `expense`)
-  - `category_id`: 分类 ID 筛选
-
-#### 添加账单
-- **URL**: `/bills`
-- **方法**: `POST`
-- **请求体**:
-  ```json
-  {
-    "type": "expense",
-    "amount": 100.0,
-    "category_id": 4,
-    "date": "2023-12-19",
-    "remark": "晚餐"
-  }
-  ```
-
-#### 更新账单
-- **URL**: `/bills/:id`
-- **方法**: `PUT`
-
-#### 删除账单
-- **URL**: `/bills/:id`
-- **方法**: `DELETE`
+## 🔐 安全与 Git 使用建议
+1. 请勿上传 `node_modules/` 目录。
+2. 建议忽略 `*.db` 文件以保护个人隐私数据。
+3. 请勿上传 `.vscode/` 个人配置。
+4. 在搬运代码时，如遇原生模块编译错误，请在对应目录下执行 `npm rebuild`。
 
 ---
 
-### 3. 分类管理 (Categories)
+## 🔌 API 接口概览
+*详细文档详见 `backend/API_DOCUMENTATION.md`*
 
-#### 获取分类列表
-- **URL**: `/categories`
-- **方法**: `GET`
-
----
-
-### 4. 统计功能 (Stats)
-
-#### 获取当月统计
-- **URL**: `/stats/monthly`
-- **方法**: `GET`
-- **响应**:
-  ```json
-  {
-    "month": "2023-12",
-    "total_income": 5000,
-    "total_expense": 2000,
-    "balance": 3000
-  }
-  ```
-
-#### 获取收支趋势
-- **URL**: `/stats/trend`
-- **方法**: `GET`
-
-#### 获取支出分类占比
-- **URL**: `/stats/category-ratio`
-- **方法**: `GET`
-- **查询参数**: `month` (可选)
+* **Auth**: `/api/auth/register`, `/api/auth/login`, `/api/auth/update-profile`
+* **Bills**: `GET /api/bills`, `POST /api/bills`, `DELETE /api/bills/:id`
+* **Stats**: `GET /api/stats/monthly`, `GET /api/stats/trend`, `GET /api/stats/category-ratio`
