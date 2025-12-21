@@ -18,17 +18,6 @@
 
 ---
 
-### 🚀 快速启动
-
-项目提供了自动化的启动脚本，会自动检查依赖并初始化数据库：
-
-1. **Windows**: 双击根目录下的 `dev.bat`
-2. **Mac/Linux**: 在终端运行 `./dev.sh`
-
-脚本将同时启动后端 (3000端口) 与前端 (5173端口)。
-
----
-
 以下为拓展功能，看时间实现：
 
 1. 语音输入收支管理，AI语音识别。
@@ -177,16 +166,12 @@ backend/
 #### 修改个人资料
 - **URL**: `/auth/update-profile`
 - **方法**: `PUT`
-  ```json
-  {
-    "username": "newname",
-    "password": "newpassword"
-  }
-  ```
+- **请求体**: (可选 username 或 password)
+ ### 快速启动
+1. **Windows**: 双击 `dev.bat`
+2. **Mac/Linux**: 运行 `./dev.sh`
 
----
-
-### 2. 账单管理 (Bills)
+脚本会自动通过 `concurrently` 启动后端 (3000端口) 与前端 (5173端口)，并自动处理依赖安装与数据库初始化。
 
 #### 获取账单列表
 - **URL**: `/bills`

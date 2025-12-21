@@ -39,15 +39,22 @@ revenue-and-expenditure-management/
 
 ---
 
-## 4. 启动项目
+## 4. 启动项目 (推荐使用一键脚本)
 
-### 推荐：一键启动 (前后端同时运行)
-在**项目根目录**运行以下命令：
-```bash
-npx concurrently -k -n "后端,前端" -c "blue,green" "cd backend && npm run dev" "cd front && npm run dev"
-```
-> [!TIP]
-> 如果前端提示找不到 `echarts` 等依赖，请尝试在命令末尾添加 `-- --force` 强制刷新缓存。
+项目提供了自动化的启动脚本，会自动检查依赖并初始化数据库：
+
+- **Mac/Linux 用户**:
+  ```bash
+  ./dev.sh
+  ```
+- **Windows 用户**:
+  直接双击根目录下的 `dev.bat` 或在终端运行 `dev.bat`。
+
+---
+
+## 5. 手动启动 (备选)
+
+如果脚本运行异常，您可以手动执行以下命令：
 
 ### 选项：分开手动启动
 
