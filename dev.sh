@@ -123,8 +123,13 @@ echo -e ""
 
 # 使用 .setup 目录下的 concurrently 启动
 CONC="./$SETUP_DIR/node_modules/.bin/concurrently"
-chmod +x "$CONC" 2>/dev/null
-$CONC -n "后端服务,前端界面" -c "blue,green" "cd backend && npm run dev" "cd front && npm run dev"
+if [ -f "$CONC" ]; then
+    chmod +x "$CONC"
+    "$CONC" -n "后端服务,前端界面" -c "blue,green" "cd backend && npm run dev" "cd front && npm run dev"
+else
+    echo -e "${RED}[错误] 未能找到 concurrently 组件，请确保步骤 3 已成功完成。${NC}"
+    exit 1
+fi
 
 if [ $? -ne 0 ]; then
     echo -e ""
