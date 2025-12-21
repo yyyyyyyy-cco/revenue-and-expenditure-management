@@ -18,7 +18,4 @@ router.get('/trend', statController.getTrendStats);
 // 获取支出分类占比数据 (用于饼图)
 router.get('/category-ratio', statController.getCategoryRatioStats);
 
-// 获取账单来源占比数据 [NEW]
-router.get('/source-ratio', statController.getSourceStats);
-
 module.exports = router;

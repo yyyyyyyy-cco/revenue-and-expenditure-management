@@ -279,21 +279,3 @@
     // ...
   ]
   ```
-
-#### 获取账单来源占比 [NEW]
-- **URL**: `/stats/source-ratio`
-- **Method**: `GET`
-- **Auth**: 需要
-- **Response**:
-  ```json
-  [
-    {
-      "name": "手动录入",
-      "value": 2500.5
-    },
-    {
-      "name": "支付宝导入",
-      "value": 1200.0
-    }
-  ]
-  ```

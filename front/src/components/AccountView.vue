@@ -241,7 +241,7 @@
         </div>
 
         <!-- 收支统计页面 -->
-        <div v-if="activePage === '3'" class="page-content stats-page">
+        <div v-show="activePage === '3'" class="page-content stats-page">
           <el-row :gutter="20">
             <!-- 指标概览卡片 -->
             <el-col :span="6" v-for="card in statOverviewCards" :key="card.title">
@@ -257,13 +257,38 @@
             </el-col>
           </el-row>
 
+          <!-- 颜色自定义工具栏 -->
+          <el-card class="chart-card" style="margin-top: 20px;">
+            <div class="color-picker-bar">
+              <span class="toolbar-title"><el-icon><Brush /></el-icon> 图表颜色自定义</span>
+              <div class="picker-group">
+                <span>收入:</span>
+                <el-color-picker v-model="chartColors.income[0]" size="small" />
+                <el-color-picker v-model="chartColors.income[1]" size="small" />
+              </div>
+              <div class="picker-group">
+                <span>支出:</span>
+                <el-color-picker v-model="chartColors.expense[0]" size="small" />
+                <el-color-picker v-model="chartColors.expense[1]" size="small" />
+              </div>
+              <div class="picker-group">
+                <span>净收益:</span>
+                <el-color-picker v-model="chartColors.net" size="small" />
+              </div>
+              <el-button type="primary" size="small" @click="refreshAllCharts">应用颜色</el-button>
+            </div>
+          </el-card>
+
           <el-row :gutter="20" style="margin-top: 20px;">
             <!-- 收支趋势图（折线+柱状） -->
             <el-col :span="16">
               <el-card class="chart-card">
                 <template #header>
                   <div class="chart-header">
-                    <span class="chart-title">收支趋势分析</span>
+                    <div>
+                      <span class="chart-title">收支趋势分析</span>
+                      <span v-if="trendGranularity === 'week' && currentWeekRange" class="chart-subtitle">({{ currentWeekRange }})</span>
+                    </div>
                     <el-radio-group v-model="trendGranularity" size="small" @change="fetchTrendData">
                       <el-radio-button label="week">周</el-radio-button>
                       <el-radio-button label="month">月</el-radio-button>
@@ -293,21 +318,6 @@
                   </div>
                 </template>
                 <div ref="chartRef" class="chart-container" style="height:400px;"></div>
-              </el-card>
-            </el-col>
-          </el-row>
-
-          <el-row :gutter="20" style="margin-top: 20px;">
-            <!-- 账单来源分布饼图 -->
-            <el-col :span="24">
-              <el-card class="chart-card">
-                <template #header>
-                  <div class="chart-header">
-                    <span class="chart-title">账单来源分布</span>
-                    <el-button type="primary" link size="small" @click="fetchSourceData">刷新</el-button>
-                  </div>
-                </template>
-                <div ref="sourceChartRef" class="chart-container" style="height:350px;"></div>
               </el-card>
             </el-col>
           </el-row>
@@ -527,7 +537,6 @@ const handleMenuSelect = (index) => {
     fetchMonthlyOverview()
     fetchCategoryRatio()
     fetchTrendData()
-    fetchSourceData()
   }
   if (index === '5') {
     fetchRecurringBills()
@@ -574,12 +583,11 @@ const statsMonth = ref(new Date().toISOString().slice(0,7))
 const statsData = ref([])
 const statsTotal = ref(0)
 const trendGranularity = ref('month')
+const currentWeekRange = ref('')
 const chartRef = ref(null)
 const trendChartRef = ref(null)
-const sourceChartRef = ref(null)
 let chartInstance = null
 let trendChartInstance = null
-let sourceChartInstance = null
 
 // 首页概览数据
 const monthlyOverview = reactive({
@@ -595,13 +603,13 @@ const statOverviewCards = computed(() => [
   { title: '分类数', value: categories.value.length, icon: 'Menu', type: 'info' }
 ])
 
-// 渐变色配置
-const colors = {
+// 渐变色配置（响应式，支持自定义）
+const chartColors = reactive({
   income: ['#84fab0', '#8fd3f4'],
   expense: ['#ff9a9e', '#fecfef'],
-  line: ['#667eea', '#764ba2'],
+  net: '#6366f1',
   pie: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc']
-}
+})
 
 const fetchMonthlyOverview = async () => {
   try {
@@ -669,9 +677,16 @@ const fetchTrendData = async () => {
     const res = await fetch(`${API_BASE}/api/stat/trend?granularity=${trendGranularity.value}`, {
       headers: token ? { Authorization: 'Bearer ' + token } : {}
     })
-    const data = await res.json()
+    const responseData = await res.json()
     if (!res.ok) return
-    renderTrendChart(data)
+    
+    if (trendGranularity.value === 'week') {
+      currentWeekRange.value = responseData.weekRange
+      renderTrendChart(responseData.data)
+    } else {
+      currentWeekRange.value = ''
+      renderTrendChart(responseData)
+    }
   } catch (err) {
     console.error('fetchTrendData error', err)
   }
@@ -682,10 +697,14 @@ const renderTrendChart = (data) => {
   if (!trendChartInstance) trendChartInstance = echarts.init(trendChartRef.value)
   
   const option = {
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    grid: { left: '5%', right: '5%', bottom: '10%', top: '20%', containLabel: true },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { data: ['收入', '支出', '净收益'] },
-    xAxis: { type: 'category', data: data.map(i => i.period) },
+    legend: { top: '5%', data: ['收入', '支出', '净收益'] },
+    xAxis: { 
+      type: 'category', 
+      data: data.map(i => i.period),
+      axisLabel: { margin: 15 }
+    },
     yAxis: { type: 'value' },
     series: [
       { 
@@ -695,8 +714,8 @@ const renderTrendChart = (data) => {
         itemStyle: { 
           borderRadius: [4, 4, 0, 0],
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: colors.income[0] },
-            { offset: 1, color: colors.income[1] }
+            { offset: 0, color: chartColors.income[0] },
+            { offset: 1, color: chartColors.income[1] }
           ])
         },
         data: data.map(i => i.income) 
@@ -708,8 +727,8 @@ const renderTrendChart = (data) => {
         itemStyle: { 
           borderRadius: [4, 4, 0, 0],
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: colors.expense[0] },
-            { offset: 1, color: colors.expense[1] }
+            { offset: 0, color: chartColors.expense[0] },
+            { offset: 1, color: chartColors.expense[1] }
           ])
         },
         data: data.map(i => i.expense) 
@@ -719,7 +738,7 @@ const renderTrendChart = (data) => {
         type: 'line',
         smooth: true,
         symbolSize: 8,
-        itemStyle: { color: '#6366f1' },
+        itemStyle: { color: chartColors.net },
         lineStyle: { width: 3, shadowColor: 'rgba(99, 102, 241, 0.3)', shadowBlur: 10 },
         data: data.map(i => (i.income - i.expense).toFixed(2))
       }
@@ -728,40 +747,20 @@ const renderTrendChart = (data) => {
   trendChartInstance.setOption(option)
 }
 
-const fetchSourceData = async () => {
-  try {
-    const res = await fetch(`${API_BASE}/api/stat/source-ratio`, {
-      headers: token ? { Authorization: 'Bearer ' + token } : {}
-    })
-    const data = await res.json()
-    if (res.ok) renderSourceChart(data)
-  } catch (err) {
-    console.error('fetchSourceData error', err)
-  }
+const refreshAllCharts = () => {
+  fetchCategoryRatio()
+  fetchTrendData()
 }
 
-const renderSourceChart = (data) => {
-  if (!sourceChartRef.value) return
-  if (!sourceChartInstance) sourceChartInstance = echarts.init(sourceChartRef.value)
-  
-  const option = {
-    tooltip: { trigger: 'item' },
-    legend: { orient: 'vertical', left: 'left' },
-    series: [
-      {
-        name: '账单来源',
-        type: 'pie',
-        radius: '65%',
-        center: ['60%', '50%'],
-        data: data,
-        roseType: 'area',
-        itemStyle: { borderRadius: 8 },
-        emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
-      }
-    ]
+watch(activePage, (newVal) => {
+  if (newVal === '3') {
+    nextTick(() => {
+      fetchMonthlyOverview()
+      fetchCategoryRatio()
+      fetchTrendData()
+    })
   }
-  sourceChartInstance.setOption(option)
-}
+})
 
 watch(statsMonth, () => fetchCategoryRatio())
 
@@ -1543,5 +1542,32 @@ html, body {
   font-size: 16px;
   font-weight: bold;
   color: #303133;
+}
+.chart-subtitle {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 8px;
+  font-weight: normal;
+}
+.color-picker-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.toolbar-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: #606266;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.picker-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #606266;
 }
 </style>

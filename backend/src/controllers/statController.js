@@ -70,6 +70,10 @@ exports.getTrendStats = (req, res) => {
             return db.all(sqlWeek, [userId, mondayStr], (err, rows) => {
                 if (err) return res.status(500).json({ error: '获取周统计失败：' + err.message });
 
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+                const sundayStr = sunday.toISOString().split('T')[0];
+
                 const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
                 const result = weekDays.map((name, index) => {
                     const found = rows.find(r => r.weekday_index === index);
@@ -79,7 +83,10 @@ exports.getTrendStats = (req, res) => {
                         expense: found ? found.expense : 0
                     };
                 });
-                res.json(result);
+                res.json({
+                    weekRange: `${mondayStr} ~ ${sundayStr}`,
+                    data: result
+                });
             });
 
         case 'year':
@@ -108,40 +115,6 @@ exports.getTrendStats = (req, res) => {
     db.all(sql, [userId, limit], (err, rows) => {
         if (err) return res.status(500).json({ error: '获取趋势数据失败：' + err.message });
         res.json(rows.reverse()); // 按时间正序返回
-    });
-};
-
-/**
- * 获取账单来源占比
- */
-exports.getSourceStats = (req, res) => {
-    const userId = req.userId;
-
-    const sql = `
-        SELECT 
-            source as name,
-            SUM(amount) as value
-        FROM bills
-        WHERE user_id = ?
-        GROUP BY source
-    `;
-
-    db.all(sql, [userId], (err, rows) => {
-        if (err) return res.status(500).json({ error: '获取来源占比失败：' + err.message });
-
-        // 映射显示名称
-        const sourceMap = {
-            'system': '手动录入',
-            'alipay': '支付宝导入',
-            'wechat': '微信导入'
-        };
-
-        const result = rows.map(r => ({
-            name: sourceMap[r.name] || r.name,
-            value: Number(r.value.toFixed(2))
-        }));
-
-        res.json(result);
     });
 };
 
