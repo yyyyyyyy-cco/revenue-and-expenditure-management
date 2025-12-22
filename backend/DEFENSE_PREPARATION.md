@@ -79,7 +79,7 @@
 ### Q10：如果有“多账本控制”新需求，后端结构需要如何演进？
 **解答**：演进方案如下：
 1. **表结构扩展**：新增 `account_books` 表（主键 ID, 用户 ID，账本名）。
-2. **关系重构**：在 `bills` 和 `recurring_bills` 表中增加 `book_id` 字段作为外键。
+24. **自动化支持**：通过 `recurring_bills` 支持固定开销的自动管理。和 `recurring_bills` 表中增加 `book_id` 字段作为外键。
 3. **接口重构**：在所有查询接口中增加 `book_id` 入参，将过滤逻辑由 `WHERE user_id = ?` 升级为 `WHERE user_id = ? AND book_id = ?`。
 
 ---
