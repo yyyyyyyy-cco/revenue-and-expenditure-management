@@ -330,7 +330,7 @@
               <el-alert
                 title="导入说明"
                 type="info"
-                description="支持支付宝（CSV）和微信（CSV）导出的对账单。系统会自动识别分类并去除重复账单。"
+                description="支持支付宝和微信导出的对账单。系统会自动识别分类并去除重复账单。"
                 show-icon
                 :closable="false"
               />
@@ -347,7 +347,7 @@
                 :before-upload="beforeUpload"
                 multiple
                 name="file"
-                accept=".csv"
+                accept=".csv, .xlsx, .xls"
               >
                 <el-icon class="el-icon--upload"><upload-filled /></el-icon>
                 <div class="el-upload__text">
