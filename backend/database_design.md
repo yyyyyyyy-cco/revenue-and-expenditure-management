@@ -6,12 +6,12 @@
 
 用于存储用户的基本信息和登录凭证。
 
-| 字段名         | 类型     | 约束                       | 说明               |
-| :------------- | :------- | :------------------------- | :----------------- |
-| `id`           | INTEGER  | PRIMARY KEY, AUTOINCREMENT | 用户唯一标识       |
-| `username`     | TEXT     | NOT NULL, UNIQUE           | 用户名（用于登录） |
+| 字段名            | 类型     | 约束                       | 说明               |
+| :---------------- | :------- | :------------------------- | :----------------- |
+| `id`            | INTEGER  | PRIMARY KEY, AUTOINCREMENT | 用户唯一标识       |
+| `username`      | TEXT     | NOT NULL, UNIQUE           | 用户名（用于登录） |
 | `password_hash` | TEXT     | NOT NULL                   | 加密后的密码       |
-| `created_at`   | DATETIME | DEFAULT CURRENT_TIMESTAMP  | 账号创建时间       |
+| `created_at`    | DATETIME | DEFAULT CURRENT_TIMESTAMP  | 账号创建时间       |
 
 ---
 
@@ -19,12 +19,11 @@
 
 预设或用户自定义的收支类别（如：餐饮、工资、交通）。
 
-| 字段名       | 类型     | 约束                                 | 说明                                          |
-| :----------- | :------- | :----------------------------------- | :-------------------------------------------- |
+| 字段名         | 类型     | 约束                                 | 说明                                          |
+| :------------- | :------- | :----------------------------------- | :-------------------------------------------- |
 | `id`         | INTEGER  | PRIMARY KEY, AUTOINCREMENT           | 分类唯一标识                                  |
 | `name`       | TEXT     | NOT NULL                             | 分类名称（如：餐饮、兼职）                    |
-| `type`       | TEXT     | CHECK(type IN ('income', 'expense')) | 类型：`income` (收入) 或 `expense` (支出)     |
-| `icon`       | TEXT     | -                                    | 分类对应的图标标识                            |
+| `type`       | TEXT     | CHECK(type IN ('income', 'expense')) | 类型：`income` (收入) 或 `expense` (支出) |
 | `created_at` | DATETIME | DEFAULT CURRENT_TIMESTAMP            | 创建时间                                      |
 
 ---
@@ -33,16 +32,16 @@
 
 核心业务数据表，记录每一笔收支明细。
 
-| 字段名        | 类型     | 约束                                 | 说明                                          |
-| :------------ | :------- | :----------------------------------- | :-------------------------------------------- |
-| `id`          | INTEGER  | PRIMARY KEY, AUTOINCREMENT           | 账单唯一标识                                  |
-| `user_id`     | INTEGER  | NOT NULL, FOREIGN KEY                | 所属用户 ID                                   |
-| `category_id` | INTEGER  | FOREIGN KEY                          | 所属分类 ID                                   |
-| `type`        | TEXT     | CHECK(type IN ('income', 'expense')) | 类型：`income` (收入) 或 `expense` (支出)     |
-| `amount`      | REAL     | NOT NULL                             | 金额                                          |
-| `date`        | DATETIME | NOT NULL                             | 发生日期                                      |
-| `remark`      | TEXT     | -                                    | 备注说明                                      |
-| `created_at`  | DATETIME | DEFAULT CURRENT_TIMESTAMP            | 记录录入时间                                  |
+| 字段名          | 类型     | 约束                                 | 说明                                               |
+| :-------------- | :------- | :----------------------------------- | :------------------------------------------------- |
+| `id`          | INTEGER  | PRIMARY KEY, AUTOINCREMENT           | 账单唯一标识                                       |
+| `user_id`     | INTEGER  | NOT NULL, FOREIGN KEY                | 所属用户 ID                                        |
+| `category_id` | INTEGER  | FOREIGN KEY                          | 所属分类 ID                                        |
+| `type`        | TEXT     | CHECK(type IN ('income', 'expense')) | 类型：`income` (收入) 或 `expense` (支出)      |
+| `amount`      | REAL     | NOT NULL                             | 金额                                               |
+| `date`        | DATETIME | NOT NULL                             | 发生日期                                           |
+| `remark`      | TEXT     | -                                    | 备注说明                                           |
+| `created_at`  | DATETIME | DEFAULT CURRENT_TIMESTAMP            | 记录录入时间                                       |
 | `source`      | TEXT     | DEFAULT 'system'                     | 账单来源（如：`system`, `alipay`, `wechat`） |
 
 ---
@@ -51,18 +50,18 @@
 
 用于记录自动生成的周期性账单（如房租、订阅服务）。
 
-| 字段名            | 类型     | 约束                                 | 说明                                          |
-| :---------------- | :------- | :----------------------------------- | :-------------------------------------------- |
-| `id`              | INTEGER  | PRIMARY KEY, AUTOINCREMENT           | 唯一标识                                      |
-| `user_id`         | INTEGER  | NOT NULL, FOREIGN KEY                | 所属用户 ID                                   |
-| `category_id`     | INTEGER  | FOREIGN KEY                          | 所属分类 ID                                   |
-| `type`            | TEXT     | CHECK(type IN ('income', 'expense')) | 类型：`income` (收入) 或 `expense` (支出)     |
-| `amount`          | REAL     | NOT NULL                             | 金额                                          |
-| `period`          | TEXT     | NOT NULL                             | 周期（如：`daily`, `weekly`, `monthly`）      |
-| `next_date`       | DATE     | NOT NULL                             | 下次生成日期                                  |
-| `remark`          | TEXT     | -                                    | 备注说明                                      |
-| `last_executed_at` | DATETIME | -                                    | 上次自动执行时间                              |
-| `created_at`      | DATETIME | DEFAULT CURRENT_TIMESTAMP            | 创建时间                                      |
+| 字段名               | 类型     | 约束                                 | 说明                                           |
+| :------------------- | :------- | :----------------------------------- | :--------------------------------------------- |
+| `id`               | INTEGER  | PRIMARY KEY, AUTOINCREMENT           | 唯一标识                                       |
+| `user_id`          | INTEGER  | NOT NULL, FOREIGN KEY                | 所属用户 ID                                    |
+| `category_id`      | INTEGER  | FOREIGN KEY                          | 所属分类 ID                                    |
+| `type`             | TEXT     | CHECK(type IN ('income', 'expense')) | 类型：`income` (收入) 或 `expense` (支出)  |
+| `amount`           | REAL     | NOT NULL                             | 金额                                           |
+| `period`           | TEXT     | NOT NULL                             | 周期（如：`daily`, `weekly`, `monthly`） |
+| `next_date`        | DATE     | NOT NULL                             | 下次生成日期                                   |
+| `remark`           | TEXT     | -                                    | 备注说明                                       |
+| `last_executed_at` | DATETIME | -                                    | 上次自动执行时间                               |
+| `created_at`       | DATETIME | DEFAULT CURRENT_TIMESTAMP            | 创建时间                                       |
 
 ---
 

@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     type TEXT CHECK(type IN ('income', 'expense')) NOT NULL,
-    icon TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -28,31 +27,31 @@ CREATE TABLE IF NOT EXISTS bills (
 );
 
 -- 初始分类数据
-INSERT OR IGNORE INTO categories (name, type, icon) VALUES 
+INSERT OR IGNORE INTO categories (name, type) VALUES 
 -- 支出 (Expense)
-('餐饮美食', 'expense', 'food-icon'),
-('服饰装扮', 'expense', 'clothes-icon'),
-('日用百货', 'expense', 'daily-icon'),
-('家居家装', 'expense', 'home-icon'),
-('数码电器', 'expense', 'digital-icon'),
-('交通出行', 'expense', 'transport-icon'),
-('住房物业', 'expense', 'housing-icon'),
-('休闲娱乐', 'expense', 'entertainment-icon'),
-('医疗教育', 'expense', 'medical-edu-icon'),
-('生活服务', 'expense', 'service-icon'),
-('商业保险', 'expense', 'insurance-icon'),
-('金融信贷', 'expense', 'financial-icon'),
-('充值缴费', 'expense', 'recharge-icon'),
-('红包转账', 'expense', 'social-icon'),
-('公益捐赠', 'expense', 'donate-icon'),
-('其他支出', 'expense', 'other-icon'),
+('餐饮美食', 'expense'),
+('服饰装扮', 'expense'),
+('日用百货', 'expense'),
+('家居家装', 'expense'),
+('数码电器', 'expense'),
+('交通出行', 'expense'),
+('住房物业', 'expense'),
+('休闲娱乐', 'expense'),
+('医疗教育', 'expense'),
+('生活服务', 'expense'),
+('商业保险', 'expense'),
+('金融信贷', 'expense'),
+('充值缴费', 'expense'),
+('红包转账', 'expense'),
+('公益捐赠', 'expense'),
+('其他支出', 'expense'),
 
 -- 收入 (Income)
-('工资薪水', 'income', 'salary-icon'),
-('投资理财', 'income', 'investment-icon'),
-('红包转账', 'income', 'social-income-icon'),
-('退款售后', 'income', 'refund-icon'),
-('其他收入', 'income', 'other-income-icon');
+('工资薪水', 'income'),
+('投资理财', 'income'),
+('红包转账', 'income'),
+('退款售后', 'income'),
+('其他收入', 'income');
 
 CREATE TABLE IF NOT EXISTS recurring_bills (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

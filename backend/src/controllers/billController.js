@@ -13,8 +13,8 @@ exports.getAllBills = (req, res) => {
     const offset = (page - 1) * limit;
     const userId = req.userId; // 从 authMiddleware 获取
 
-    // 基础查询语句，关联分类表以获取分类名称和图标
-    let sql = `SELECT b.*, c.name as category_name, c.icon as category_icon 
+    // 基础查询语句，关联分类表以获取分类名称
+    let sql = `SELECT b.*, c.name as category_name 
                FROM bills b 
                LEFT JOIN categories c ON b.category_id = c.id
                WHERE b.user_id = ?`;
@@ -171,6 +171,8 @@ exports.updateBill = (req, res) => {
 exports.deleteBill = (req, res) => {
     const { id } = req.params;
     const userId = req.userId;
+
+    const sql = `DELETE FROM bills WHERE id = ? AND user_id = ?`;
 
     db.run(sql, [id, userId], function (err) {
         if (err) return res.status(500).json({ error: '删除账单失败：' + err.message });
