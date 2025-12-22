@@ -1014,10 +1014,11 @@ const importResults = ref(null)
  */
 const beforeUpload = (file) => {
   const isCSV = file.name.toLowerCase().endsWith('.csv')
+  const isExcel = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')
   const isLt10M = file.size / 1024 / 1024 < 10
 
-  if (!isCSV) {
-    ElMessage.error('只能上传 CSV 格式的文件')
+  if (!isCSV && !isExcel) {
+    ElMessage.error('只能上传 CSV 或 Excel 格式的文件')
     return false
   }
   if (!isLt10M) {

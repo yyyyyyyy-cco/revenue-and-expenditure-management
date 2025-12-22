@@ -11,16 +11,16 @@
 
 ## 2. 通用状态码
 
-| 状态码 | 含义 | 说明 |
-| :--- | :--- | :--- |
-| 200 | OK | 请求成功 |
-| 201 | Created | 资源创建成功 |
-| 400 | Bad Request | 请求参数错误或缺失 |
-| 401 | Unauthorized | Token 无效、过期或未登录 |
-| 403 | Forbidden | 无权访问该资源 |
-| 404 | Not Found | 请求的资源不存在 |
-| 409 | Conflict | 资源冲突（如用户名已存在） |
-| 500 | Internal Server Error | 服务器内部错误 |
+| 状态码 | 含义                  | 说明                       |
+| :----- | :-------------------- | :------------------------- |
+| 200    | OK                    | 请求成功                   |
+| 201    | Created               | 资源创建成功               |
+| 400    | Bad Request           | 请求参数错误或缺失         |
+| 401    | Unauthorized          | Token 无效、过期或未登录   |
+| 403    | Forbidden             | 无权访问该资源             |
+| 404    | Not Found             | 请求的资源不存在           |
+| 409    | Conflict              | 资源冲突（如用户名已存在） |
+| 500    | Internal Server Error | 服务器内部错误             |
 
 ---
 
@@ -29,6 +29,7 @@
 ### 3.1 用户认证 (Authentication)
 
 #### 注册用户
+
 - **URL**: `/auth/register`
 - **Method**: `POST`
 - **Auth**: 无需认证
@@ -48,6 +49,7 @@
   ```
 
 #### 用户登录
+
 - **URL**: `/auth/login`
 - **Method**: `POST`
 - **Auth**: 无需认证
@@ -67,6 +69,7 @@
   ```
 
 #### 修改个人资料
+
 - **URL**: `/auth/update-profile`
 - **Method**: `PUT`
 - **Auth**: 需要
@@ -89,6 +92,7 @@
 ### 3.2 账单管理 (Bills)
 
 #### 获取账单列表
+
 - **URL**: `/bills`
 - **Method**: `GET`
 - **Auth**: 需要
@@ -125,6 +129,7 @@
   ```
 
 #### 创建新账单
+
 - **URL**: `/bills`
 - **Method**: `POST`
 - **Auth**: 需要
@@ -152,6 +157,7 @@
   ```
 
 #### 更新账单
+
 - **URL**: `/bills/:id`
 - **Method**: `PUT`
 - **Auth**: 需要
@@ -174,6 +180,7 @@
   ```
 
 #### 删除账单
+
 - **URL**: `/bills/:id`
 - **Method**: `DELETE`
 - **Auth**: 需要
@@ -185,13 +192,14 @@
   ```
 
 #### 导入账单文件
+
 - **URL**: `/bills/import`
 - **Method**: `POST`
 - **Auth**: 需要
 - **Headers**:
   - `Content-Type`: `multipart/form-data`
 - **Body**:
-  - `file`: (Binary File) 微信或支付宝导出的 CSV 账单文件
+  - `file`: (Binary File) 微信或支付宝导出的 XLSX/CSV 账单文件
 - **Response**:
   ```json
   {
@@ -206,6 +214,7 @@
 ### 3.3 分类管理 (Categories)
 
 #### 获取所有分类
+
 - **URL**: `/categories`
 - **Method**: `GET`
 - **Auth**: 需要 (建议开放，但目前未强制要求，视具体中间件配置而定，代码中似乎未强制)
@@ -232,6 +241,7 @@
 ### 3.4 统计分析 (Stats)
 
 #### 获取月度收支概览
+
 - **URL**: `/stats/monthly`
 - **Method**: `GET`
 - **Auth**: 需要
@@ -246,6 +256,7 @@
   ```
 
 #### 获取收支趋势
+
 - **URL**: `/stats/trend`
 - **Method**: `GET`
 - **Auth**: 需要
@@ -264,6 +275,7 @@
   ```
 
 #### 获取支出分类占比
+
 - **URL**: `/stats/category-ratio`
 - **Method**: `GET`
 - **Auth**: 需要
