@@ -157,8 +157,12 @@ echo.
 set "CONC=call .\%SETUP_DIR%\node_modules\.bin\concurrently"
 %CONC% -n "后端服务,前端界面" -c "blue,green" "cd backend && npm run dev" "cd front && npm run dev"
 
-if %errorlevel% neq 0 (
+set "DEV_EXIT=%errorlevel%"
+if not "%DEV_EXIT%"=="0" (
     echo.
-    echo [提示] 系统已停止运行。
-    pause
+    echo [错误] 开发服务异常终止 (错误码 %DEV_EXIT%)
+    echo [提示] 上方已输出详细错误，请滚动查看或复制保存。
+    echo [提示] 窗口将保持开启，输入 exit 以关闭。
+    cmd /k "echo [提示] 您现在可以检查错误输出，输入 exit 以关闭窗口。"
+    exit /b %DEV_EXIT%
 )
