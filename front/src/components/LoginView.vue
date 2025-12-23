@@ -89,6 +89,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const form = reactive({
@@ -103,7 +104,7 @@ const API_BASE = 'http://localhost:3000'
 
 const handleLogin = async () => {
   if (!form.username || !form.password) {
-    alert('请输入用户名和密码')
+    ElMessage.warning('请输入用户名和密码')
     return
   }
 
@@ -119,7 +120,7 @@ const handleLogin = async () => {
     const data = await res.json()
 
     if (!res.ok) {
-      alert(data.message || '登录失败')
+      ElMessage.error(data.message || '登录失败')
       isSubmitting.value = false
       return
     }
@@ -130,21 +131,21 @@ const handleLogin = async () => {
       localStorage.setItem('username', form.username)
       localStorage.setItem('isLoggedIn', 'true')
       if (rememberMe.value) localStorage.setItem('rememberMe', 'true')
-      alert('登录成功！')
+      ElMessage.success('登录成功！')
       router.push('/account')
     } else {
-      alert('登录成功，但未收到 token')
+      ElMessage.warning('登录成功，但未收到 token')
     }
   } catch (err) {
     console.error('登录错误', err)
-    alert('无法连接到服务器')
+    ElMessage.error('无法连接到服务器')
   } finally {
     isSubmitting.value = false
   }
 }
 
 const showForgotPassword = () => {
-  alert('密码重置功能正在开发中，敬请期待！')
+  ElMessage.info('密码重置功能正在开发中，敬请期待！')
 }
 
 const navigateToRegister = () => {

@@ -9,7 +9,14 @@
         </div>
         <div class="user-info">
           <el-icon size="18" color="#fff"><User /></el-icon>
-          <span class="username">普通用户</span>
+          <span class="username">{{ username }}</span>
+          <el-button
+            size="small"
+            plain
+            type="danger"
+            class="logout-btn"
+            @click="handleLogout"
+          >退出登录</el-button>
         </div>
       </div>
     </el-header>
@@ -518,6 +525,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Menu, Plus, Wallet, User, Search, Refresh, Edit, Delete, 
@@ -528,6 +536,7 @@ import * as echarts from 'echarts'
 
 // 侧边栏切换页面
 const activePage = ref('1')
+const router = useRouter()
 const handleMenuSelect = (index) => {
   activePage.value = index
   if (index === '2') {
@@ -577,6 +586,26 @@ const pagination = reactive({
 
 const API_BASE = 'http://localhost:3000'
 const token = localStorage.getItem('token') || ''
+const username = ref(localStorage.getItem('username') || '普通用户')
+
+const handleLogout = () => {
+  ElMessageBox.confirm(
+    '确定要退出登录吗？',
+    '提示',
+    {
+      confirmButtonText: '退出',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('username')
+    localStorage.removeItem('isLoggedIn')
+    localStorage.removeItem('rememberMe')
+    ElMessage.success('您已退出登录')
+    router.push('/login')
+  }).catch(() => {})
+}
 
 // 统计相关
 const statsMonth = ref(new Date().toISOString().slice(0,7))
@@ -1214,8 +1243,19 @@ html, body {
 .user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   font-size: 14px;
+}
+
+.logout-btn {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
+.logout-btn:hover {
+  border-color: #fff;
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 /* 主内容布局 */

@@ -79,6 +79,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const form = reactive({ username: '', email: '', password: '', confirmPassword: '' })
@@ -89,11 +90,11 @@ const API_BASE = 'http://localhost:3000'
 
 const handleRegister = async () => {
   if (!form.username || !form.password || !form.confirmPassword) {
-    alert('请完整填写必填项')
+    ElMessage.warning('请完整填写必填项')
     return
   }
   if (form.password !== form.confirmPassword) {
-    alert('两次输入的密码不一致')
+    ElMessage.warning('两次输入的密码不一致')
     return
   }
 
@@ -106,14 +107,14 @@ const handleRegister = async () => {
     })
     const data = await res.json()
     if (!res.ok) {
-      alert(data.message || '注册失败')
+      ElMessage.error(data.message || '注册失败')
       return
     }
-    alert('注册成功，请登录')
+    ElMessage.success('注册成功，请登录')
     router.push('/login')
   } catch (err) {
     console.error('注册错误', err)
-    alert('无法连接到服务器')
+    ElMessage.error('无法连接到服务器')
   } finally {
     isSubmitting.value = false
   }
