@@ -44,7 +44,7 @@ if "%~dp0"=="%TEMP%\" (
 )
 
 :: 1. Environment Check
-echo [步骤 1/5] 正在检查运行环境...
+echo [步骤 1/6] 正在检查运行环境...
 where node >nul 2>nul
 if %errorlevel% neq 0 (
     echo [错误] 未检测到 Node.js！请访问 https://nodejs.org/ 安装。
@@ -64,7 +64,7 @@ for %%p in (3000 5173 5174) do (
 echo.
 
 :: 2. Registry Configuration
-echo [步骤 2/5] 正在优化下载速度...
+echo [步骤 2/6] 正在优化下载速度...
 set "NPM_REGISTRY=https://registry.npmmirror.com"
 choice /c YN /m "是否使用淘宝镜像源 (推荐)?" /t 5 /d Y
 if %errorlevel% equ 1 (
@@ -74,8 +74,25 @@ if %errorlevel% equ 1 (
 )
 echo.
 
-:: 3. Setup Components
-echo [步骤 3/5] 正在配置核心组件...
+:: 3. Clean old dependencies
+echo [步骤 3/6] 正在清理旧的依赖文件...
+set "CLEANED="
+for %%D in ("%SETUP_DIR%" "%BACKEND_DIR%" "%FRONT_DIR%") do (
+    if exist "%%~D\node_modules\" (
+        echo    - 正在删除 %%~D\node_modules
+        rmdir /s /q "%%~D\node_modules\" >nul 2>nul
+        set "CLEANED=1"
+    )
+)
+if not defined CLEANED (
+    echo    未检测到旧依赖，跳过清理。
+) else (
+    echo [成功] 旧依赖已删除，将重新下载安装。
+)
+echo.
+
+:: 4. Setup Components
+echo [步骤 4/6] 正在配置核心组件...
 if not exist "%SETUP_DIR%\node_modules\" (
     echo 正在安装，请稍候...
     pushd %SETUP_DIR%
@@ -91,8 +108,8 @@ if not exist "%SETUP_DIR%\node_modules\" (
 echo [成功] 核心组件就绪。
 echo.
 
-:: 4. Backend Setup
-echo [步骤 4/5] 正在配置后端服务...
+:: 5. Backend Setup
+echo [步骤 5/6] 正在配置后端服务...
 pushd %BACKEND_DIR%
 if not exist "node_modules\" (
     echo 正在安装后端依赖...
@@ -117,8 +134,8 @@ popd
 echo [成功] 后端配置完成。
 echo.
 
-:: 5. Frontend Setup
-echo [步骤 5/5] 正在配置前端界面...
+:: 6. Frontend Setup
+echo [步骤 6/6] 正在配置前端界面...
 pushd %FRONT_DIR%
 if not exist "node_modules\" (
     echo 正在安装前端依赖...
