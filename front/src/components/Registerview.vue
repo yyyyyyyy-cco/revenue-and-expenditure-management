@@ -37,7 +37,15 @@
         <div class="form-group">
           <label class="form-label">密码</label>
           <div class="input-group">
-            <input :type="showPassword ? 'text' : 'password'" class="form-input" placeholder="设置密码" v-model="form.password" required />
+            <input
+              :type="showPassword ? 'text' : 'password'"
+              class="form-input"
+              placeholder="设置密码"
+              v-model="form.password"
+              minlength="8"
+              maxlength="16"
+              required
+            />
             <div class="input-icon" @click="showPassword = !showPassword" style="cursor: pointer;">
               <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -53,7 +61,15 @@
         <div class="form-group">
           <label class="form-label">确认密码</label>
           <div class="input-group">
-            <input :type="showPassword ? 'text' : 'password'" class="form-input" placeholder="再次输入密码" v-model="form.confirmPassword" required />
+            <input
+              :type="showPassword ? 'text' : 'password'"
+              class="form-input"
+              placeholder="再次输入密码"
+              v-model="form.confirmPassword"
+              minlength="8"
+              maxlength="16"
+              required
+            />
             <div class="input-icon" style="pointer-events: none;">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -91,6 +107,10 @@ const API_BASE = 'http://localhost:3000'
 const handleRegister = async () => {
   if (!form.username || !form.password || !form.confirmPassword) {
     ElMessage.warning('请完整填写必填项')
+    return
+  }
+  if (form.password.length < 8 || form.password.length > 16) {
+    ElMessage.warning('密码长度需为8-16位')
     return
   }
   if (form.password !== form.confirmPassword) {

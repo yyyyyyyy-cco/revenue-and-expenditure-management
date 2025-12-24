@@ -29,6 +29,11 @@ exports.register = (req, res) => {
         return res.status(400).json({ message: '用户名和密码为必填项' });
     }
 
+    // 限制密码长度，避免过短或过长的弱口令
+    if (password.length < 8 || password.length > 16) {
+        return res.status(400).json({ message: '密码长度需为 8-16 位' });
+    }
+
     // 检查用户名是否重复：若存在同名记录则返回 409 冲突
     db.get('SELECT id FROM users WHERE username = ?', [username], (err, row) => {
         if (err) return res.status(500).json({ message: '数据库查询错误' });
