@@ -3,7 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const iconv = require('iconv-lite');
 
+/**
+ * 解析微信账单文件（Excel格式）
+ * @param {string} filePath - 微信账单文件路径
+ * @returns {Array} 解析后的账单数据数组
+ */
 function parseWeChatBill(filePath) {
+    // 读取Excel文件
     const workbook = xlsx.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -12,18 +18,18 @@ function parseWeChatBill(filePath) {
     const bills = [];
     let headerFound = false;
 
-    // Define expected columns and their indices
+    // 定义预期列及其索引
     const colMap = {};
 
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         if (!headerFound) {
-            // "交易时间" is a key column in WeChat bills
+            // "交易时间"是微信账单中的关键列
             const timeColIndex = row.indexOf('交易时间');
             if (timeColIndex !== -1) {
                 headerFound = true;
 
-                // Map columns
+                // 映射列索引
                 row.forEach((col, index) => {
                     if (col === '交易时间') colMap.time = index;
                     if (col === '交易类型') colMap.type_desc = index;
@@ -37,25 +43,25 @@ function parseWeChatBill(filePath) {
             continue;
         }
 
-        // Process data rows
-        if (row.length === 0) continue; // Skip empty rows
+        // 处理数据行
+        if (row.length === 0) continue; // 跳过空行
 
         const amountStr = row[colMap.amount];
-        if (!amountStr) continue; // Skip invalid rows (e.g. summary or footer)
+        if (!amountStr) continue; // 跳过无效行（如汇总或页脚）
 
-        // Parse Amount: "¥11.50" -> 11.50
+        // 解析金额：将"¥11.50"转换为11.50
         const amount = parseFloat(amountStr.replace('¥', '').trim());
         if (isNaN(amount)) continue;
 
-        // Parse Type: "支出" -> "expense", "收入" -> "income"
+        // 解析类型：将"支出"转换为"expense"，"收入"转换为"income"
         const direction = row[colMap.direction];
-        if (direction !== '支出' && direction !== '收入') continue; // Skip validation/neutral
+        if (direction !== '支出' && direction !== '收入') continue; // 跳过验证/中性交易
         const type = direction === '支出' ? 'expense' : 'income';
 
-        // Parse Date
+        // 解析日期
         let date = row[colMap.time];
 
-        // Deal with remark fallback
+        // 处理备注回退逻辑
         let remark = row[colMap.remark];
         if (!remark || remark === '/') {
             const typeDesc = row[colMap.type_desc] || '';
@@ -70,7 +76,7 @@ function parseWeChatBill(filePath) {
             counterparty: row[colMap.counterparty],
             product: row[colMap.product],
             remark: remark,
-            type_desc: row[colMap.type_desc], // Extracted for classification
+            type_desc: row[colMap.type_desc], // 提取用于分类
             source: 'wechat'
         };
 
@@ -80,9 +86,15 @@ function parseWeChatBill(filePath) {
     return bills;
 }
 
+/**
+ * 解析支付宝账单文件（CSV格式）
+ * @param {string} filePath - 支付宝账单文件路径
+ * @returns {Array} 解析后的账单数据数组
+ */
 function parseAlipayCSV(filePath) {
+    // 读取文件并使用GBK编码解码（支付宝通常使用GBK编码）
     const buffer = fs.readFileSync(filePath);
-    const content = iconv.decode(buffer, 'gbk'); // Alipay uses GBK usually
+    const content = iconv.decode(buffer, 'gbk');
     const lines = content.split(/\r?\n/);
 
     const bills = [];
@@ -96,12 +108,13 @@ function parseAlipayCSV(filePath) {
         const cols = line.split(',').map(c => c.trim());
 
         if (!headerFound) {
+            // 查找包含"交易时间"和"金额"的标题行
             if (line.includes('交易时间') && line.includes('金额')) {
                 headerFound = true;
                 cols.forEach((col, index) => {
                     col = col.trim();
                     if (col === '交易时间') colMap.time = index;
-                    if (col === '交易分类') colMap.category = index; // Map category column
+                    if (col === '交易分类') colMap.category = index; // 映射分类列
                     if (col === '收/支') colMap.direction = index;
                     if (col === '金额') colMap.amount = index;
                     if (col === '交易对方') colMap.counterparty = index;
@@ -111,9 +124,9 @@ function parseAlipayCSV(filePath) {
             }
             continue;
         }
-        // Data processing
+        // 数据处理
         if (colMap.time === undefined || colMap.amount === undefined) {
-            // console.log('[Parser] Missing column mapping');
+            // console.log('[Parser] 缺少列映射');
             continue;
         }
 
@@ -134,7 +147,7 @@ function parseAlipayCSV(filePath) {
         }
         const counterparty = cols[colMap.counterparty] || '';
         const product = cols[colMap.product] || '';
-        const originalCategory = cols[colMap.category] || ''; // Extract category
+        const originalCategory = cols[colMap.category] || ''; // 提取分类
 
         const generatedRemark = `${counterparty} ${product}`.trim();
 
@@ -145,7 +158,7 @@ function parseAlipayCSV(filePath) {
             counterparty: counterparty,
             product: product,
             remark: generatedRemark,
-            original_category: originalCategory, // Extracted for classification
+            original_category: originalCategory, // 提取用于分类
             source: 'alipay'
         };
 
@@ -154,14 +167,22 @@ function parseAlipayCSV(filePath) {
     return bills;
 }
 
+/**
+ * 根据文件扩展名解析账单文件
+ * @param {string} filePath - 账单文件路径
+ * @returns {Array} 解析后的账单数据数组
+ * @throws {Error} 当文件格式不支持时抛出错误
+ */
 function parseBillFile(filePath) {
     const ext = path.extname(filePath).toLowerCase();
     if (ext === '.xlsx' || ext === '.xls') {
+        // Excel格式文件，使用微信账单解析器
         return parseWeChatBill(filePath);
     } else if (ext === '.csv') {
+        // CSV格式文件，使用支付宝账单解析器
         return parseAlipayCSV(filePath);
     } else {
-        throw new Error('Unsupported file format: ' + ext);
+        throw new Error('不支持的文件格式: ' + ext);
     }
 }
 

@@ -1,3 +1,7 @@
+-- schema.sql
+-- 本文件定义数据库的表结构与初始数据，用于数据库初始化脚本（init.js）执行。
+-- 包含用户表、分类表、账单表以及定期账单表和初始分类数据。
+
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
@@ -26,7 +30,7 @@ CREATE TABLE IF NOT EXISTS bills (
     FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
--- 初始分类数据
+-- 初始分类数据（含支出与收入分类）
 INSERT OR IGNORE INTO categories (name, type) VALUES 
 -- 支出 (Expense)
 ('餐饮美食', 'expense'),

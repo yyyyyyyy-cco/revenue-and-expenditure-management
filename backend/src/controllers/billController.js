@@ -1,4 +1,11 @@
-const db = require('../db/db');
+// billController.js
+// 账单相关控制器，负责单笔和批量账单的增删改查及导入：
+// - getAllBills：分页查询账单，支持按月份、类型、分类筛选
+// - createBill：创建单条账单，并智能兜底分类
+// - updateBill / deleteBill：更新和删除当前用户的账单
+// - importBills：从支付宝/微信账单文件中批量导入数据，包含去重与自动分类逻辑
+
+const db = require('../db/db'); // 数据库连接
 
 /**
  * 获取所有账单（支持分页和筛选）
@@ -10,7 +17,7 @@ const db = require('../db/db');
  */
 exports.getAllBills = (req, res) => {
     const { page = 1, limit = 10, month, type, category_id } = req.query;
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit; // 计算偏移量
     const userId = req.userId; // 从 authMiddleware 获取
 
     // 基础查询语句，关联分类表以获取分类名称
@@ -81,10 +88,11 @@ exports.getAllBills = (req, res) => {
 /**
  * 创建新账单
  * 
- * 1. 验证必填字段
- * 2. 校验 category_id 的合法性 (是否存在且类型匹配)
- * 3. 若未传或校验未通过，自动分配对应的“其他”分类
- * 4. 插入数据库
+ * 处理流程：
+ * 1. 验证必填字段 amount/type/date 是否存在
+ * 2. 若传入 category_id，则校验其是否存在且类型与账单类型一致
+ * 3. 若未传或校验失败，则自动分配“其他收入”或“其他支出”分类
+ * 4. 将最终决定的 category_id 写入 bills 表
  */
 exports.createBill = (req, res) => {
     const { amount, type, category_id, date, remark } = req.body;
@@ -94,7 +102,7 @@ exports.createBill = (req, res) => {
         return res.status(400).json({ error: '参数缺失：金额(amount)、类型(type)和日期(date)为必填项' });
     }
 
-    // 统一定义插入逻辑的函数
+    // 统一定义插入逻辑的函数，接收最终的 category_id
     const performInsert = (finalCategoryId) => {
         const sql = `INSERT INTO bills (user_id, category_id, type, amount, date, remark) VALUES (?, ?, ?, ?, ?, ?)`;
         const params = [userId, finalCategoryId, type, amount, date, remark];
@@ -110,7 +118,7 @@ exports.createBill = (req, res) => {
         });
     };
 
-    // 获取默认分类的函数
+    // 获取默认分类的函数：当无有效分类时使用
     const assignDefaultCategory = () => {
         const defaultName = type === 'income' ? '其他收入' : '其他支出';
         db.get('SELECT id FROM categories WHERE name = ? AND type = ?', [defaultName, type], (err, row) => {
@@ -144,8 +152,10 @@ exports.createBill = (req, res) => {
 /**
  * 更新账单
  * 
- * 1. 验证账单 ID 和用户权限（只能更新自己的账单）
- * 2. 执行更新操作
+ * 行为：
+ * - 根据 url 参数中的 id 和当前登录用户 userId 搜索目标账单
+ * - 若存在则更新 amount/type/category_id/date/remark 等字段
+ * - 若记录不存在（或不属于当前用户）则返回 404
  */
 exports.updateBill = (req, res) => {
     const { id } = req.params;
@@ -165,8 +175,9 @@ exports.updateBill = (req, res) => {
 /**
  * 删除账单
  * 
- * 1. 验证账单 ID 和用户权限
- * 2. 执行物理删除
+ * 限制：
+ * - 只能删除当前用户自己的账单（WHERE id = ? AND user_id = ?）
+ * - 若记录不存在或无权限则返回 404
  */
 exports.deleteBill = (req, res) => {
     const { id } = req.params;
@@ -181,6 +192,10 @@ exports.deleteBill = (req, res) => {
     });
 };
 
+// 账单导入与自动分类相关工具：
+// - parseBillFile：解析支付宝/微信账单文件为统一格式
+// - categoryClassifier：根据关键字、对方名称等自动推断分类
+// - fs：用于处理上传文件（删除临时文件等）
 const { parseBillFile } = require('../utils/billParser');
 const categoryClassifier = require('../utils/categoryClassifier');
 const fs = require('fs');
@@ -191,13 +206,13 @@ const fs = require('fs');
  * 
  * 流程：
  * 1. 检查是否有文件上传
- * 2. 加载分类映射表（用于自动归类）
- * 3. 解析上传的文件内容为标准对象列表
- * 4. 开启数据库事务
- * 5. 遍历账单列表：
- *    - 自动匹配分类
- *    - 执行去重插入 (WHERE NOT EXISTS)
- * 6. 统计成功和重复数量，提交事务并返回结果
+ * 2. 从数据库加载所有分类，构建名称到 ID 的映射表（供智能分类使用）
+ * 3. 使用 parseBillFile 解析上传的账单文件，生成标准 Bill 对象列表
+ * 4. 在事务中遍历账单列表：
+ *    - 调用 categoryClassifier 自动匹配分类 ID
+ *    - 通过 “INSERT ... WHERE NOT EXISTS (...)” 实现去重插入
+ * 5. 统计成功插入和重复跳过的数量，提交事务并返回结果
+ * 6. 无论成功或失败，都删除临时上传文件
  */
 exports.importBills = async (req, res) => {
     if (!req.file) {
